@@ -538,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                 /* Card(
+                  Card(
                     elevation: 3,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -547,18 +547,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             "🔥 GitHub citati (zadnjih 365 dana)",
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 16),
+                          buildGitHubHeatmap(),
                         ],
                       ),
                     ),
                   ),
-                  buildGitHubHeatmap(),*/
                 ],
               ),
             ),
@@ -759,10 +759,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: List.generate(7, (dayIndex) {
                 final index = weekIndex * 7 + dayIndex;
 
-                if (index >= days.length) return const SizedBox();
+                if (index >= days.length) {
+                  return const SizedBox();
+                }
 
                 final date = days[index];
-                final key = date.toIso8601String().split("T")[0];
+                final key =
+                    "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
                 final value = heatmapData[key] ?? 0;
 
