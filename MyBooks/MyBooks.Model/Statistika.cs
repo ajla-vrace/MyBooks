@@ -7,6 +7,7 @@
     public List<BrojPoMjesecu> KnjigePoMjesecima { get; set; } = new();
 
     public List<ZanrStatistika> TopZanrovi { get; set; } = new();
+    public List<AutorStatistika> TopAutori { get; set; } = new();
 }
 
 public class BrojPoMjesecu
@@ -20,4 +21,9 @@ public class ZanrStatistika
     public string Naziv { get; set; } = "";
     public int Broj { get; set; }
     public double Postotak { get; set; }
+}
+public class AutorStatistika
+{
+    public string ImeAutora { get; set; } = "";
+    public int BrojKnjiga { get; set; }
 }

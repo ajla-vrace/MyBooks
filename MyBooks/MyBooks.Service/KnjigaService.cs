@@ -201,7 +201,18 @@ namespace MyBooks.Service
             }
 
             result.TopZanrovi = sviZanrovi;
-
+            var topAutori = _context.Knjigas
+     .Where(k => !string.IsNullOrEmpty(k.Autor))
+     .GroupBy(k => k.Autor)
+     .Select(g => new AutorStatistika
+     {
+         ImeAutora = g.Key,
+         BrojKnjiga = g.Count()
+     })
+     .OrderByDescending(x => x.BrojKnjiga)
+     .Take(5)
+     .ToList();
+            result.TopAutori = topAutori;
             return result;
         }
         public override async Task<bool> Delete(int id)

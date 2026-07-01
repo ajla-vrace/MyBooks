@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List get booksPerMonth => statistika?.knjigePoMjesecima ?? [];
 
   List get genres => statistika?.topZanrovi ?? [];
+  List get authors => statistika?.topAutori ?? [];
 
   Widget buildBooksChart() {
     if (booksPerMonth.isEmpty) return const SizedBox();
@@ -480,6 +481,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+
+                  Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "✍️ Top autori",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          buildTopAutori(statistika?.topAutori ?? []),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -623,6 +650,50 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget buildTopAutori(List topAutori) {
+    if (topAutori.isEmpty) return const SizedBox();
+
+    final max =
+        topAutori.map((e) => e.brojKnjiga ?? 0).reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      children: topAutori.map((a) {
+        final percent = (a.brojKnjiga ?? 0) / max;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  a.imeAutora ?? "",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: percent.toDouble(),
+                    minHeight: 12,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: const AlwaysStoppedAnimation(
+                      Color(0xFF6D8B74),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text("${a.brojKnjiga}"),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

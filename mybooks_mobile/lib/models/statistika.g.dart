@@ -15,6 +15,9 @@ Statistika _$StatistikaFromJson(Map<String, dynamic> json) => Statistika(
       (json['topZanrovi'] as List<dynamic>?)
           ?.map((e) => TopZanr.fromJson(e as Map<String, dynamic>))
           .toList(),
+      (json['topAutori'] as List<dynamic>?)
+          ?.map((e) => TopAutor.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$StatistikaToJson(Statistika instance) =>
@@ -23,6 +26,7 @@ Map<String, dynamic> _$StatistikaToJson(Statistika instance) =>
       'prosjecnaOcjena': instance.prosjecnaOcjena,
       'knjigePoMjesecima': instance.knjigePoMjesecima,
       'topZanrovi': instance.topZanrovi,
+      'topAutori': instance.topAutori,
     };
 
 KnjigePoMjesecu _$KnjigePoMjesecuFromJson(Map<String, dynamic> json) =>
@@ -46,5 +50,17 @@ TopZanr _$TopZanrFromJson(Map<String, dynamic> json) => TopZanr(
 Map<String, dynamic> _$TopZanrToJson(TopZanr instance) => <String, dynamic>{
       'naziv': instance.naziv,
       'broj': instance.broj,
+      'postotak': instance.postotak,
+    };
+
+TopAutor _$TopAutorFromJson(Map<String, dynamic> json) => TopAutor(
+      json['imeAutora'] as String?,
+      json['brojKnjiga'] as int?,
+      (json['postotak'] as num?)?.toDouble(),
+    );
+
+Map<String, dynamic> _$TopAutorToJson(TopAutor instance) => <String, dynamic>{
+      'imeAutora': instance.imeAutora,
+      'brojKnjiga': instance.brojKnjiga,
       'postotak': instance.postotak,
     };

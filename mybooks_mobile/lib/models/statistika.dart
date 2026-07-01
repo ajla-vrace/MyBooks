@@ -10,12 +10,10 @@ class Statistika {
   List<KnjigePoMjesecu>? knjigePoMjesecima;
   List<TopZanr>? topZanrovi;
 
-  Statistika(
-    this.ukupnoKnjiga,
-    this.prosjecnaOcjena,
-    this.knjigePoMjesecima,
-    this.topZanrovi,
-  );
+  List<TopAutor>? topAutori;
+  
+  Statistika(this.ukupnoKnjiga, this.prosjecnaOcjena, this.knjigePoMjesecima,
+      this.topZanrovi, this.topAutori);
 
   factory Statistika.fromJson(Map<String, dynamic> json) =>
       _$StatistikaFromJson(json);
@@ -33,8 +31,7 @@ class KnjigePoMjesecu {
   factory KnjigePoMjesecu.fromJson(Map<String, dynamic> json) =>
       _$KnjigePoMjesecuFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$KnjigePoMjesecuToJson(this);
+  Map<String, dynamic> toJson() => _$KnjigePoMjesecuToJson(this);
 }
 
 @JsonSerializable()
@@ -52,6 +49,23 @@ class TopZanr {
   factory TopZanr.fromJson(Map<String, dynamic> json) =>
       _$TopZanrFromJson(json);
 
-  Map<String, dynamic> toJson() =>
-      _$TopZanrToJson(this);
+  Map<String, dynamic> toJson() => _$TopZanrToJson(this);
+}
+
+@JsonSerializable()
+class TopAutor {
+  String? imeAutora;
+  int? brojKnjiga;
+  double? postotak;
+
+  TopAutor(
+    this.imeAutora,
+    this.brojKnjiga,
+    this.postotak,
+  );
+
+  factory TopAutor.fromJson(Map<String, dynamic> json) =>
+      _$TopAutorFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TopAutorToJson(this);
 }
