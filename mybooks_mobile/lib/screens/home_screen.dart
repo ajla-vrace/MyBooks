@@ -79,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List get genres => statistika?.topZanrovi ?? [];
   List get authors => statistika?.topAutori ?? [];
+  List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
 
   Widget buildBooksChart() {
     if (booksPerMonth.isEmpty) return const SizedBox();
@@ -186,6 +187,35 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }).toList(),
     );
+  }
+
+  Map<String, int> get heatmapData {
+    final map = <String, int>{};
+
+    for (var item in citatStatistika?.citatiPoDanima ?? []) {
+      if (item.datum == null) continue;
+
+      final key = item.datum!.toIso8601String().split("T")[0];
+      final value = (item.broj ?? 0) as num;
+      map[key] = (map[key] ?? 0) + value.toInt();
+    }
+
+    return map;
+  }
+
+  Color heatColor(int value) {
+    if (value == 0) return Colors.grey.shade200;
+    if (value == 1) return const Color(0xFF9BE9A8);
+    if (value == 2) return const Color(0xFF40C463);
+    if (value == 3) return const Color(0xFF30A14E);
+    return const Color(0xFF216E39);
+  }
+
+  List<DateTime> get last365Days {
+    final today = DateTime.now();
+    return List.generate(365, (i) {
+      return today.subtract(Duration(days: 364 - i));
+    });
   }
 
   @override
@@ -507,6 +537,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                 /* Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            "🔥 GitHub citati (zadnjih 365 dana)",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  buildGitHubHeatmap(),*/
                 ],
               ),
             ),
@@ -649,6 +701,84 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildHeatmap() {
+    if (citatiPoDanima.isEmpty) {
+      return const Text("Nema podataka");
+    }
+
+    // grupiramo po datumu (sigurnost)
+    Map<String, int> map = {};
+
+    for (var item in citatiPoDanima) {
+      if (item.datum == null) continue;
+
+      String key = item.datum!.toIso8601String().split("T")[0];
+      map[key] = (map[key] ?? 0) + (item.broj ?? 0);
+    }
+
+    final maxValue =
+        map.values.isNotEmpty ? map.values.reduce((a, b) => a > b ? a : b) : 1;
+
+    Color getColor(int value) {
+      if (value == 0) return Colors.grey.shade200;
+      if (value == 1) return const Color(0xFFA4B494);
+      if (value == 2) return const Color(0xFF6D8B74);
+      return const Color(0xFF2F5D50);
+    }
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: map.entries.map((entry) {
+        return Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: getColor(entry.value),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget buildGitHubHeatmap() {
+    final days = last365Days;
+
+    return SizedBox(
+      height: 140,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(52, (weekIndex) {
+            return Column(
+              children: List.generate(7, (dayIndex) {
+                final index = weekIndex * 7 + dayIndex;
+
+                if (index >= days.length) return const SizedBox();
+
+                final date = days[index];
+                final key = date.toIso8601String().split("T")[0];
+
+                final value = heatmapData[key] ?? 0;
+
+                return Container(
+                  margin: const EdgeInsets.all(2),
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: value == 0 ? Colors.grey.shade200 : heatColor(value),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              }),
+            );
+          }),
+        ),
       ),
     );
   }

@@ -11,4 +11,10 @@
     public string? NazivKnjige { get; set; }
 
     public int? BrojStranice { get; set; }
+    public List<CitatPoDanu> CitatiPoDanima { get; set; } = new();
+}
+public class CitatPoDanu
+{
+    public DateTime Datum { get; set; }
+    public int Broj { get; set; }
 }

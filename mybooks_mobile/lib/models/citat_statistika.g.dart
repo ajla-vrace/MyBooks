@@ -14,6 +14,9 @@ CitatStatistika _$CitatStatistikaFromJson(Map<String, dynamic> json) =>
       json['tekstCitata'] as String?,
       json['nazivKnjige'] as String?,
       json['brojStranice'] as int?,
+      (json['citatiPoDanima'] as List<dynamic>?)
+          ?.map((e) => CitatPoDanu.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$CitatStatistikaToJson(CitatStatistika instance) =>
@@ -24,4 +27,16 @@ Map<String, dynamic> _$CitatStatistikaToJson(CitatStatistika instance) =>
       'tekstCitata': instance.tekstCitata,
       'nazivKnjige': instance.nazivKnjige,
       'brojStranice': instance.brojStranice,
+      'citatiPoDanima': instance.citatiPoDanima,
+    };
+
+CitatPoDanu _$CitatPoDanuFromJson(Map<String, dynamic> json) => CitatPoDanu(
+      json['datum'] == null ? null : DateTime.parse(json['datum'] as String),
+      json['broj'] as int?,
+    );
+
+Map<String, dynamic> _$CitatPoDanuToJson(CitatPoDanu instance) =>
+    <String, dynamic>{
+      'datum': instance.datum?.toIso8601String(),
+      'broj': instance.broj,
     };

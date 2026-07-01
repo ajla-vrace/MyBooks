@@ -74,49 +74,82 @@ namespace MyBooks.Service
         {
             var danas = DateTime.Today;
 
+            // 🔥 DISTINCT DANI
             var citati = _context.Citats
-                .Include(c => c.IdKnjigaNavigation)
-                .OrderByDescending(c => c.DatumKreiranja)
+                .Where(c => c.DatumKreiranja.HasValue)
+                .Select(c => c.DatumKreiranja.Value.Date)
+                .Distinct()
+                .OrderByDescending(d => d)
                 .ToList();
 
-            bool dodanoDanas = citati.Any(c =>
-                c.DatumKreiranja.HasValue &&
-                c.DatumKreiranja.Value.Date == danas);
+            bool dodanoDanas = citati.Contains(danas);
 
-            var danasnjiCitat = citati
-                .FirstOrDefault(c =>
-                    c.DatumKreiranja.HasValue &&
-                    c.DatumKreiranja.Value.Date == danas);
+            var danasnjiCitat = _context.Citats
+                .Where(c => c.DatumKreiranja.HasValue &&
+                            c.DatumKreiranja.Value.Date == danas)
+                .OrderByDescending(c => c.DatumKreiranja)
+                .FirstOrDefault();
 
+            // 🔥 CURRENT STREAK
             int trenutniNiz = 0;
+            var checkDate = danas;
 
-            foreach (var c in citati)
+            foreach (var d in citati)
             {
-                if (!c.DatumKreiranja.HasValue)
-                    continue;
-
-                var date = c.DatumKreiranja.Value.Date;
-
-                if (date == danas.AddDays(-trenutniNiz))
+                if (d == checkDate)
                 {
                     trenutniNiz++;
+                    checkDate = checkDate.AddDays(-1);
                 }
-                else if (date < danas.AddDays(-trenutniNiz))
+                else if (d < checkDate)
                 {
                     break;
                 }
             }
 
-            int najduziNiz = trenutniNiz;
+            // 🔥 NAJDUŽI STREAK
+            int maxStreak = 0;
+            int temp = 0;
+            DateTime? prev = null;
+
+            foreach (var d in citati.OrderBy(d => d))
+            {
+                if (prev == null || d == prev.Value.AddDays(1))
+                {
+                    temp++;
+                    maxStreak = Math.Max(maxStreak, temp);
+                }
+                else
+                {
+                    temp = 1;
+                }
+
+                prev = d;
+            }
+
+            // 🔥 CITATI PO DANIMA (HEATMAP DATA)
+            var citatiPoDanima = _context.Citats
+                .Where(c => c.DatumKreiranja.HasValue)
+                .GroupBy(c => c.DatumKreiranja.Value.Date)
+                .Select(g => new CitatPoDanu
+                {
+                    Datum = g.Key,
+                    Broj = g.Count()
+                })
+                .OrderBy(x => x.Datum)
+                .ToList();
 
             return new CitatiStatistika
             {
                 DodanoDanas = dodanoDanas,
                 TrenutniNiz = trenutniNiz,
-                NajduziNiz = najduziNiz,
+                NajduziNiz = maxStreak,
                 TekstCitata = danasnjiCitat?.TekstCitata,
                 NazivKnjige = danasnjiCitat?.IdKnjigaNavigation?.Naslov,
-                BrojStranice = danasnjiCitat?.BrojStranice
+                BrojStranice = danasnjiCitat?.BrojStranice,
+
+                // 🔥 OVO JE KLJUČNO
+                CitatiPoDanima = citatiPoDanima
             };
         }
     }
