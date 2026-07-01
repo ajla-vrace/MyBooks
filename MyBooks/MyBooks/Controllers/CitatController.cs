@@ -13,9 +13,10 @@ namespace eSpa.Controllers
     [Route("[controller]")]
     public class CitatController : BaseCRUDController<Citat, CitatSearchObject, CitatInsertRequest, CitatUpdateRequest>
     {
+        private readonly ICitatService _service;
         public CitatController(ILogger<BaseController<Citat, CitatSearchObject>> logger, ICitatService service) : base(logger, service)
         {
-
+            _service = service;
         }
         // [Authorize(Roles = "Administrator")]
         public override Task<Citat> Insert([FromBody] CitatInsertRequest insert)
@@ -34,6 +35,11 @@ namespace eSpa.Controllers
         public override Task<bool> Delete(int id)
         {
             return base.Delete(id);
+        }
+        [HttpGet("statistika")]
+        public CitatiStatistika GetStatistika()
+        {
+            return _service.GetStatistika();
         }
 
     }

@@ -1,8 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/models/citat_statistika.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
+import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
+import 'package:mybooks_mobile/screens/add_citat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
   int brojCitata = 0;
   Statistika? statistika;
+  CitatStatistika? citatStatistika;
   final int yearlyGoal = 30;
+
   @override
   void initState() {
     super.initState();
@@ -33,13 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
       var provider = StatistikaProvider();
       var result = await provider.getStatistika();
 
-      var citatProvider = CitatProvider();
-      var citati = await citatProvider.get();
+      var citatProvider = CitatStatistikaProvider(); // 🔥 OVO
+      var citatResult = await citatProvider.getStatistika(); // 🔥 OVO
+      print("CITAT STATISTIKA: ${citatResult.toJson()}");
+      var citati = await CitatProvider().get();
 
       if (!mounted) return;
 
       setState(() {
         statistika = result;
+        citatStatistika = citatResult;
         brojCitata = citati.result.length;
         isLoading = false;
       });
@@ -48,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         statistika = null;
+        citatStatistika = null;
         brojCitata = 0;
         isLoading = false;
       });
@@ -275,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
-                                "Reading Goal 2026",
+                                "Cilj čitanja 2026",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -340,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.green.shade100,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child:  Row(
+                            child: Row(
                               children: [
                                 Icon(
                                   Icons.celebration,
@@ -359,12 +368,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 18),
                         ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
-
+                  buildDailyChallengeCard(),
+                  const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
@@ -472,6 +483,108 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget buildDailyChallengeCard() {
+    final dodanoDanas = citatStatistika?.dodanoDanas ?? false;
+    final streak = citatStatistika?.trenutniNiz ?? 0;
+    final best = citatStatistika?.najduziNiz ?? 0;
+
+    String message;
+
+    if (!dodanoDanas) {
+      message = "Dodaj danasnji citat i nastavi svoj streak 🔥";
+    } else if (streak == 1) {
+      message = "Odličan početak! Prvi dan streaka 💪";
+    } else if (streak < 5) {
+      message = "Zadržavaš ritam! Ne prekidaj niz 📚";
+    } else if (streak < 10) {
+      message = "Wow! Već ozbiljan streak 🚀";
+    } else {
+      message = "Legenda si čitanja 📖🔥";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: dodanoDanas ? Colors.green.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: dodanoDanas
+              ? Colors.green
+              : const Color(0xFF6D8B74).withOpacity(0.3),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                dodanoDanas ? Icons.check_circle : Icons.local_fire_department,
+                color: dodanoDanas ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Dnevni izazov citata",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                "🔥 $streak",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                "Best streak: $best",
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      dodanoDanas ? Colors.grey : const Color(0xFF6D8B74),
+                ),
+                onPressed: dodanoDanas
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AddCitatScreen(),
+                          ),
+                        ).then((_) {
+                          loadData(); // 🔥 refresh nakon dodavanja
+                        });
+                      },
+                child: Text(
+                  dodanoDanas ? "Danas gotovo" : "Dodaj citat",
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

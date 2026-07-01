@@ -23,12 +23,12 @@ namespace MyBooks.Service
         public override IQueryable<Database.Citat> AddFilter(IQueryable<Database.Citat> query, CitatSearchObject? search = null)
         {
             var filteredQuery = base.AddFilter(query, search);
-            
+
 
             // Ako je korisničko ime i naziv usluge uneseno
             filteredQuery = filteredQuery.Include(x => x.IdKnjigaNavigation);
 
-            if (search?.IdKnjiga>0)
+            if (search?.IdKnjiga > 0)
             {
                 filteredQuery = filteredQuery.Where(x => x.IdKnjiga == search.IdKnjiga);
             }
@@ -43,7 +43,7 @@ namespace MyBooks.Service
             var entity = _mapper.Map<Database.Citat>(insert);
 
             // Postavi trenutni datum
-           
+
 
             // Dodaj u bazu podataka
             _context.Citats.Add(entity);
@@ -69,6 +69,55 @@ namespace MyBooks.Service
             await _context.SaveChangesAsync();
 
             return _mapper.Map<Model.Citat>(entity);
+        }
+        public CitatiStatistika GetStatistika()
+        {
+            var danas = DateTime.Today;
+
+            var citati = _context.Citats
+                .Include(c => c.IdKnjigaNavigation)
+                .OrderByDescending(c => c.DatumKreiranja)
+                .ToList();
+
+            bool dodanoDanas = citati.Any(c =>
+                c.DatumKreiranja.HasValue &&
+                c.DatumKreiranja.Value.Date == danas);
+
+            var danasnjiCitat = citati
+                .FirstOrDefault(c =>
+                    c.DatumKreiranja.HasValue &&
+                    c.DatumKreiranja.Value.Date == danas);
+
+            int trenutniNiz = 0;
+
+            foreach (var c in citati)
+            {
+                if (!c.DatumKreiranja.HasValue)
+                    continue;
+
+                var date = c.DatumKreiranja.Value.Date;
+
+                if (date == danas.AddDays(-trenutniNiz))
+                {
+                    trenutniNiz++;
+                }
+                else if (date < danas.AddDays(-trenutniNiz))
+                {
+                    break;
+                }
+            }
+
+            int najduziNiz = trenutniNiz;
+
+            return new CitatiStatistika
+            {
+                DodanoDanas = dodanoDanas,
+                TrenutniNiz = trenutniNiz,
+                NajduziNiz = najduziNiz,
+                TekstCitata = danasnjiCitat?.TekstCitata,
+                NazivKnjige = danasnjiCitat?.IdKnjigaNavigation?.Naslov,
+                BrojStranice = danasnjiCitat?.BrojStranice
+            };
         }
     }
 }
