@@ -6,6 +6,7 @@ import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/screens/add_citat_screen.dart';
+import 'package:mybooks_mobile/widgets/mood_ring_chart.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -83,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List get genres => statistika?.topZanrovi ?? [];
   List get authors => statistika?.topAutori ?? [];
   List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
+  List<MoodStatistika> get moods => statistika?.moodStatistika ?? [];
 
   Widget buildBooksChart() {
     if (booksPerMonth.isEmpty) return const SizedBox();
@@ -560,6 +562,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           //buildMonthLabels(),
                           //const SizedBox(height: 8),
                           buildGitHubHeatmap(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "💙 Kako su se knjige osjećajno odrazile na tebe",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          MoodRingChart(
+                            moods: moods,
+                          ),
                         ],
                       ),
                     ),
