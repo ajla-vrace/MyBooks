@@ -41,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
       var citatProvider = CitatStatistikaProvider(); // 🔥 OVO
       var citatResult = await citatProvider.getStatistika(); // 🔥 OVO
       print("CITAT STATISTIKA: ${citatResult.toJson()}");
+      for (var c in citatResult.citatiPoDanima ?? []) {
+        print("${c.datum} -> ${c.broj}");
+      }
       var citati = await CitatProvider().get();
 
       if (!mounted) return;
@@ -554,6 +557,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 16),
+                          //buildMonthLabels(),
+                          //const SizedBox(height: 8),
                           buildGitHubHeatmap(),
                         ],
                       ),
@@ -562,6 +567,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget buildMonthLabels() {
+    final days = last365Days;
+
+    return SizedBox(
+      height: 20,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(52, (weekIndex) {
+            final date = days[(weekIndex * 7).clamp(0, days.length - 1)];
+
+            String text = "";
+
+            if (date.day <= 7) {
+              const months = [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Maj",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dec"
+              ];
+
+              text = months[date.month - 1];
+            }
+
+            return SizedBox(
+              width: 14,
+              child: Text(
+                text,
+                style: const TextStyle(fontSize: 10),
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -748,39 +798,99 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget buildGitHubHeatmap() {
     final days = last365Days;
+    final weeks = (days.length / 7).ceil();
+
+    const months = [
+      "",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Maj",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Dec"
+    ];
 
     return SizedBox(
-      height: 140,
+      height: 170,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(52, (weekIndex) {
-            return Column(
-              children: List.generate(7, (dayIndex) {
-                final index = weekIndex * 7 + dayIndex;
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Nazivi mjeseci
+            Row(
+              children: List.generate(weeks, (weekIndex) {
+                final firstIndex = weekIndex * 7;
 
-                if (index >= days.length) {
-                  return const SizedBox();
+                if (firstIndex >= days.length) {
+                  return const SizedBox(width: 14);
                 }
 
-                final date = days[index];
-                final key =
-                    "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+                final firstDay = days[firstIndex];
 
-                final value = heatmapData[key] ?? 0;
-
-                return Container(
-                  margin: const EdgeInsets.all(2),
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: value == 0 ? Colors.grey.shade200 : heatColor(value),
-                    borderRadius: BorderRadius.circular(2),
+                return SizedBox(
+                  width: 14,
+                  child: Text(
+                    firstDay.day <= 7 ? months[firstDay.month] : "",
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 );
               }),
-            );
-          }),
+            ),
+
+            const SizedBox(height: 6),
+
+            // Heatmap
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(weeks, (weekIndex) {
+                return Column(
+                  children: List.generate(7, (dayIndex) {
+                    final index = weekIndex * 7 + dayIndex;
+
+                    if (index >= days.length) {
+                      return const SizedBox(
+                        width: 10,
+                        height: 10,
+                      );
+                    }
+
+                    final date = days[index];
+
+                    final key =
+                        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+                    final value = heatmapData[key] ?? 0;
+
+                    return Tooltip(
+                      message:
+                          "${date.day}.${date.month}.${date.year}\n$value citata",
+                      child: Container(
+                        margin: const EdgeInsets.all(2),
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: value == 0
+                              ? Colors.grey.shade200
+                              : heatColor(value),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );

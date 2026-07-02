@@ -213,6 +213,18 @@ namespace MyBooks.Service
      .Take(5)
      .ToList();
             result.TopAutori = topAutori;
+            var moodStatistika = await _context.Knjigas
+    .Where(x => x.Mood != null)
+    .GroupBy(x => x.Mood)
+    .Select(g => new MoodStatistika
+    {
+        Mood = g.Key,
+        Broj = g.Count()
+    })
+    .OrderByDescending(x => x.Broj)
+    .ToListAsync();
+
+            result.MoodStatistika = moodStatistika;
             return result;
         }
         public override async Task<bool> Delete(int id)

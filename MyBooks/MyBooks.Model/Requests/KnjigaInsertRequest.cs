@@ -22,6 +22,7 @@ namespace MyBooks.Model.Requests
         public string? Status { get; set; }
         public string? Recenzija { get; set; }
         public bool IsFavorite { get; set; }
+        public string? Mood { get; set; }
         public string? SlikaBase64 { get; set; }
         public List<int> ZanroviIds { get; set; } = new List<int>();
         // public string? SlikaBase64 { get; set; }

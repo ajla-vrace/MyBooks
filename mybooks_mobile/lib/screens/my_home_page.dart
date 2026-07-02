@@ -19,29 +19,13 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> screens = const [
     HomeScreen(),
     KnjigeScreen(),
-    SizedBox(), // PLUS dugme placeholder
+    //SizedBox(), // PLUS dugme placeholder
+    AddKnjigaScreen(), // 👈 OVO
     CitatiScreen(),
     ProfileScreen(),
   ];
 
- void _onTap(int index) async {
-    // ➕ PLUS BUTTON
-   if (index == 2) {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const AddKnjigaScreen(),
-    ),
-  );
-
-  if (result == true) {
-    setState(() {
-      _selectedIndex = _selectedIndex; // ostaje gdje si bila
-    });
-  }
-
-  return;
-}
+  void _onTap(int index) {
     setState(() {
       _selectedIndex = index;
     });

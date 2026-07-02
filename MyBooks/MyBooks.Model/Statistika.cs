@@ -8,6 +8,7 @@
 
     public List<ZanrStatistika> TopZanrovi { get; set; } = new();
     public List<AutorStatistika> TopAutori { get; set; } = new();
+    public List<MoodStatistika> MoodStatistika { get; set; }
 }
 
 public class BrojPoMjesecu
@@ -15,7 +16,11 @@ public class BrojPoMjesecu
     public string Mjesec { get; set; } = "";
     public int Broj { get; set; }
 }
-
+public class MoodStatistika
+{
+    public string Mood { get; set; }
+    public int Broj { get; set; }
+}
 public class ZanrStatistika
 {
     public string Naziv { get; set; } = "";

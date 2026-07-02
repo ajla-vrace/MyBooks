@@ -11,9 +11,10 @@ class Statistika {
   List<TopZanr>? topZanrovi;
 
   List<TopAutor>? topAutori;
+  List<MoodStatistika>? moodStatistika;
   
   Statistika(this.ukupnoKnjiga, this.prosjecnaOcjena, this.knjigePoMjesecima,
-      this.topZanrovi, this.topAutori);
+      this.topZanrovi, this.topAutori, this.moodStatistika);
 
   factory Statistika.fromJson(Map<String, dynamic> json) =>
       _$StatistikaFromJson(json);
@@ -33,6 +34,21 @@ class KnjigePoMjesecu {
 
   Map<String, dynamic> toJson() => _$KnjigePoMjesecuToJson(this);
 }
+
+@JsonSerializable()
+class MoodStatistika {
+  String? mood;
+  int? broj;
+
+  MoodStatistika(this.mood, this.broj);
+
+  factory MoodStatistika.fromJson(Map<String, dynamic> json) =>
+      _$MoodStatistikaFromJson(json);
+
+  Map<String, dynamic> toJson() => _$MoodStatistikaToJson(this);
+}
+
+
 
 @JsonSerializable()
 class TopZanr {
@@ -68,4 +84,4 @@ class TopAutor {
       _$TopAutorFromJson(json);
 
   Map<String, dynamic> toJson() => _$TopAutorToJson(this);
-}
+} 

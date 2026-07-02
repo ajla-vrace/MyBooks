@@ -85,10 +85,11 @@ namespace MyBooks.Service
             bool dodanoDanas = citati.Contains(danas);
 
             var danasnjiCitat = _context.Citats
-                .Where(c => c.DatumKreiranja.HasValue &&
-                            c.DatumKreiranja.Value.Date == danas)
-                .OrderByDescending(c => c.DatumKreiranja)
-                .FirstOrDefault();
+     .Include(c => c.IdKnjigaNavigation)
+     .Where(c => c.DatumKreiranja.HasValue &&
+                 c.DatumKreiranja.Value.Date == danas)
+     .OrderByDescending(c => c.DatumKreiranja)
+     .FirstOrDefault();
 
             // 🔥 CURRENT STREAK
             int trenutniNiz = 0;

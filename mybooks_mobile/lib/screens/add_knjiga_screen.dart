@@ -5,6 +5,7 @@ import 'package:mybooks_mobile/providers/knjiga_provider.dart';
 import 'package:mybooks_mobile/providers/zanr_provider.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:mybooks_mobile/data/moods.dart';
 
 class AddKnjigaScreen extends StatefulWidget {
   const AddKnjigaScreen({super.key});
@@ -17,6 +18,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   final _formKey = GlobalKey<FormState>();
   File? selectedImage;
   String? base64Image;
+  String? selectedMood;
 
   final naslovController = TextEditingController();
   final autorController = TextEditingController();
@@ -94,6 +96,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         "slikaBase64": base64Image,
         "zanroviIds": selectedZanrovi,
         "isFavorite": isFavorite,
+        "mood": selectedMood,
       });
 
       if (!mounted) return;
@@ -116,6 +119,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         selectedImage = null;
         base64Image = null;
         isFavorite = false;
+        selectedMood = null;
       });
       Future.delayed(const Duration(milliseconds: 200), () {
         _scrollController.animateTo(
@@ -209,6 +213,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
           children: [
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: zanrovi.map((z) {
                 final selected = selectedZanrovi.contains(z.id);
 
@@ -325,6 +330,56 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               const SizedBox(height: 8),
               buildZanrovi(),
               const SizedBox(height: 20),
+              const SizedBox(height: 20),
+              const Text(
+                "Kako si se osjećala?",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: List.generate(moods.length, (index) {
+                  final mood = moods[index];
+
+                  final isSelected = selectedMood == mood["text"];
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedMood = mood["text"];
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF1B5E20).withOpacity(0.15)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF1B5E20)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(mood["emoji"]!,
+                              style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 6),
+                          Text(mood["text"]!),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
               Row(
                 children: [
                   const Text("Favorite"),

@@ -17,15 +17,17 @@ abstract class BaseProvider<T> with ChangeNotifier {
     _endpoint = endpoint;
     /*_baseUrl = const String.fromEnvironment("baseUrl",
         defaultValue: "https://10.0.2.2:7031/");*/
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "http://10.0.2.2:5031/");
-        print("baseurl $_baseUrl");
+    /* _baseUrl = const String.fromEnvironment("baseUrl",
+        defaultValue: "http://10.0.2.2:5031/");*/ //ovovovovvo
+    print("baseurl $_baseUrl");
     /*_baseUrl = const String.fromEnvironment("baseUrl",
         defaultValue: "http://192.168.1.6:5031/");*/
     /* _baseUrl = const String.fromEnvironment("baseUrl",
     defaultValue: "https://localhost:7031/");*/
     _baseUrl = const String.fromEnvironment("baseUrl",
     defaultValue: "https://localhost:7208/");
+   /* _baseUrl = const String.fromEnvironment("baseUrl",
+        defaultValue: "https://10.0.2.2:7208/");*/ //za emulator
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }
@@ -62,8 +64,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     //print("response: ${response.request} ${response.statusCode}, ${response.body}");
   }
 
-  
-
   Future getById(int id) async {
     var url = "$_baseUrl$_endpoint/$id";
     var uri = Uri.parse(url);
@@ -79,13 +79,17 @@ abstract class BaseProvider<T> with ChangeNotifier {
     }
   }
 
-
   Future<T> insert(dynamic request) async {
     var url = "$_baseUrl$_endpoint";
     var uri = Uri.parse(url);
     var headers = createHeaders();
 
     var jsonRequest = jsonEncode(request);
+
+    print("REQUEST URL: $url");
+    print("REQUEST BODY: $jsonRequest");
+    print("REQUEST HEADERS: $headers");
+
     var response = await http!.post(uri, headers: headers, body: jsonRequest);
 
     if (isValidResponse(response)) {
@@ -123,7 +127,6 @@ abstract class BaseProvider<T> with ChangeNotifier {
     }
   }
 
-  
   Future<bool> delete(int id) async {
     var url = "$_baseUrl$_endpoint/$id";
     var uri = Uri.parse(url);
@@ -157,6 +160,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
       throw new Exception("Unauthorized");
     } else {
       print(response.body);
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
       throw new Exception("Something bad happened please try again");
     }
   }
@@ -164,8 +169,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
   Map<String, String> createHeaders() {
     /*String username = Authorization.username ?? "";
     String password = Authorization.password ?? "";*/
-String username="proba";
-String password="proba";
+    String username = "proba";
+    String password = "proba";
     print("passed creds: $username, $password");
 
     String basicAuth =
@@ -210,6 +215,4 @@ String password="proba";
     });
     return query;
   }
-
-  
 }
