@@ -70,5 +70,19 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.WishKnjiga>(entity);
         }
+        public async Task<Model.WishKnjiga> GetRandom()
+        {
+            var query = _context.WishKnjigas.AsQueryable();
+
+            var list = await query.ToListAsync();
+
+            if (list.Count == 0)
+                return null;
+
+            var random = new Random();
+            var item = list[random.Next(list.Count)];
+
+            return _mapper.Map<Model.WishKnjiga>(item);
+        }
     }
 }

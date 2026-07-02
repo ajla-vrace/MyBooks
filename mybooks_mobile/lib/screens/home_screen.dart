@@ -2,9 +2,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/models/citat_statistika.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
+import 'package:mybooks_mobile/models/wish_knjiga.dart';
 import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
+import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
 import 'package:mybooks_mobile/screens/add_citat_screen.dart';
 import 'package:mybooks_mobile/widgets/mood_ring_chart.dart';
 
@@ -21,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Statistika? statistika;
   CitatStatistika? citatStatistika;
   final int yearlyGoal = 30;
+
+  WishKnjiga? randomBook;
+  bool loadingRandom = false;
+  bool hasPicked = false;
 
   @override
   void initState() {
@@ -65,6 +71,23 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> pickRandomBook() async {
+    setState(() {
+      loadingRandom = true;
+      hasPicked = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 600));
+    // mala "spin" animacija
+
+    final result = await WishKnjigaProvider().getRandom();
+
+    setState(() {
+      randomBook = result;
+      loadingRandom = false;
+    });
   }
 
   Color getGenreColor(int index) {
@@ -410,6 +433,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  buildRandomWishBook(),
+                  const SizedBox(height: 24),
                   buildDailyChallengeCard(),
                   const SizedBox(height: 24),
                   Row(
@@ -595,6 +621,210 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
     );
+  }
+
+  Widget buildRandomWishBook() {
+    Widget content = const SizedBox();
+
+    if (!hasPicked) {
+      content = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              "🎲 Knjiga za tebe",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Ne znaš što čitati?",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "Prepusti izbor aplikaciji i otkrij svoju sljedeću knjigu 📚",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF6D8B74),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: pickRandomBook,
+              child: const Text(
+                "🎯 Predloži knjigu",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (loadingRandom) {
+      content = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                builder: (context, value, child) {
+                  return Transform.rotate(
+                    angle: value * 6.3,
+                    child: const Icon(
+                      Icons.casino,
+                      size: 50,
+                      color: Color(0xFF6D8B74),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Kocka odlučuje tvoju knjigu...",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (randomBook != null) {
+      content = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              "🎯 Tvoja preporuka",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              randomBook!.naslov ?? "",
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "✍️ ${randomBook!.autor ?? "Nepoznat"}",
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                getPriorityIcon(randomBook!.prioritet),
+                const SizedBox(width: 6),
+                Text(
+                  randomBook!.prioritet ?? "-",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF6D8B74),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  hasPicked = false;
+                  randomBook = null;
+                });
+              },
+              child: const Text(
+                "🔄 Pokušaj ponovo",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: content,
+    );
+  }
+
+  Widget getPriorityIcon(String? priority) {
+    switch (priority) {
+      case "Visok":
+        return const Icon(Icons.local_fire_department, color: Colors.red);
+
+      case "Srednji":
+        return const Icon(Icons.flash_on, color: Colors.orange);
+
+      case "Nizak":
+        return const Icon(Icons.eco, color: Colors.green);
+
+      default:
+        return const Icon(Icons.book, color: Colors.grey);
+    }
   }
 
   Widget buildMonthLabels() {

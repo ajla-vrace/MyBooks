@@ -13,9 +13,10 @@ namespace eSpa.Controllers
     [Route("[controller]")]
     public class WishKnjigaController : BaseCRUDController<WishKnjiga, WishKnjigaSearchObject, WishKnjigaInsertRequest, WishKnjigaUpdateRequest>
     {
+        private readonly IWishKnjigaService _service;
         public WishKnjigaController(ILogger<BaseController<WishKnjiga, WishKnjigaSearchObject>> logger, IWishKnjigaService service) : base(logger, service)
         {
-
+            _service = service;
         }
         // [Authorize(Roles = "Administrator")]
         public override Task<WishKnjiga> Insert([FromBody] WishKnjigaInsertRequest insert)
@@ -34,6 +35,11 @@ namespace eSpa.Controllers
         public override Task<bool> Delete(int id)
         {
             return base.Delete(id);
+        }
+        [HttpGet("random")]
+        public async Task<WishKnjiga?> GetRandom()
+        {
+            return await _service.GetRandom();
         }
 
     }
