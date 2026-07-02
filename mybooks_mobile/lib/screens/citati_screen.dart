@@ -14,12 +14,14 @@ class CitatiScreen extends StatefulWidget {
 }
 
 class _CitatiScreenState extends State<CitatiScreen> {
-  List<Citat> citati = [];
+  List<Citat> citati = [];        // filtrirani
+  List<Citat> allCitati = [];     // SVI citati (za citat dana)
   List<Knjiga> knjige = [];
 
   bool isLoading = true;
-
   int? selectedBookId;
+
+  Citat? citatDana;
 
   @override
   void initState() {
@@ -45,19 +47,48 @@ class _CitatiScreenState extends State<CitatiScreen> {
     try {
       var provider = CitatProvider();
 
-      var result = await provider.get(
+      // ⭐ SVI CITATI (za daily quote)
+      var allResult = await provider.get();
+
+      // ⭐ FILTRIRANI CITATI (za listu)
+      var filteredResult = await provider.get(
         filter: {
           if (selectedBookId != null) "IdKnjiga": selectedBookId,
         },
       );
 
       setState(() {
-        citati = result.result.reversed.toList();
+        allCitati = allResult.result.reversed.toList();
+        citati = filteredResult.result.reversed.toList();
         isLoading = false;
       });
+
+      generateCitatDana();
     } catch (e) {
       setState(() => isLoading = false);
     }
+  }
+
+  /// ⭐ STABILAN CITAT DANA (NEZAVISAN OD FILTERA)
+  void generateCitatDana() {
+    if (allCitati.isEmpty) {
+      citatDana = null;
+      return;
+    }
+
+    if (allCitati.length < 2) {
+      citatDana = allCitati.first;
+      return;
+    }
+
+    final today = DateTime.now();
+
+    final seed =
+        today.year * 10000 + today.month * 100 + today.day;
+
+    final index = seed % allCitati.length;
+
+    citatDana = allCitati[index];
   }
 
   Future<void> toggleFavorite(Citat citat) async {
@@ -79,7 +110,10 @@ class _CitatiScreenState extends State<CitatiScreen> {
 
     setState(() {
       citati.removeWhere((c) => c.id == id);
+      allCitati.removeWhere((c) => c.id == id);
     });
+
+    generateCitatDana();
   }
 
   void confirmDelete(Citat citat) {
@@ -108,6 +142,58 @@ class _CitatiScreenState extends State<CitatiScreen> {
     );
   }
 
+  /// ⭐ CITAT DANA UI
+  Widget buildCitatDana() {
+    if (citatDana == null) return const SizedBox();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white),
+              SizedBox(width: 6),
+              Text(
+                "Citat dana",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "\"${citatDana!.tekstCitata ?? ""}\"",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "- ${citatDana!.idKnjigaNavigation?.autor ?? "Nepoznat"}",
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget buildCitatCard(Citat citat) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
@@ -122,90 +208,29 @@ class _CitatiScreenState extends State<CitatiScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// QUOTE
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.format_quote_rounded,
-                      size: 42,
-                      color: Color(0xFF6D8B74),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      citat.tekstCitata ?? "",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontStyle: FontStyle.italic,
-                        height: 1.6,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                const Icon(
+                  Icons.format_quote_rounded,
+                  size: 42,
+                  color: Color(0xFF6D8B74),
                 ),
-
+                const SizedBox(height: 6),
+                Text(
+                  citat.tekstCitata ?? "",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontStyle: FontStyle.italic,
+                    height: 1.6,
+                  ),
+                ),
                 const SizedBox(height: 12),
-
                 Divider(color: Colors.grey.shade300),
-
                 const SizedBox(height: 12),
-
-                /// BOOK INFO
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 50,
-                        height: 70,
-                        color: Colors.grey.shade200,
-                        child: (citat.idKnjigaNavigation?.slika != null &&
-                                citat.idKnjigaNavigation!.slika!.isNotEmpty)
-                            ? Image.memory(
-                                base64Decode(
-                                  citat.idKnjigaNavigation!.slika!,
-                                ),
-                                fit: BoxFit.cover,
-                              )
-                            : Center(
-                                child: Icon(
-                                  Icons.menu_book_rounded,
-                                  color: Colors.grey.shade400,
-                                  size: 22,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            citat.idKnjigaNavigation?.naslov ?? "",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            citat.idKnjigaNavigation?.autor ?? "",
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            "str. ${citat.brojStranice ?? 0}",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        citat.idKnjigaNavigation?.naslov ?? "",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                     GestureDetector(
@@ -215,7 +240,6 @@ class _CitatiScreenState extends State<CitatiScreen> {
                             ? Icons.favorite
                             : Icons.favorite_border,
                         color: Colors.red,
-                        size: 20,
                       ),
                     ),
                   ],
@@ -228,11 +252,7 @@ class _CitatiScreenState extends State<CitatiScreen> {
             right: 6,
             child: GestureDetector(
               onTap: () => confirmDelete(citat),
-              child: const Icon(
-                Icons.close,
-                size: 18,
-                color: Colors.grey,
-              ),
+              child: const Icon(Icons.close, size: 18),
             ),
           ),
         ],
@@ -251,14 +271,10 @@ class _CitatiScreenState extends State<CitatiScreen> {
             onPressed: () async {
               var result = await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const AddCitatScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const AddCitatScreen()),
               );
 
-              if (result == true) {
-                loadData();
-              }
+              if (result == true) loadData();
             },
           ),
         ],
@@ -269,44 +285,34 @@ class _CitatiScreenState extends State<CitatiScreen> {
               children: [
                 /// FILTER
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int?>(
-                        value: selectedBookId,
-                        isExpanded: true,
-                        hint: const Text("Sve knjige"),
-                        items: [
-                          const DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text("Sve knjige"),
-                          ),
-                          ...knjige.map((book) {
-                            return DropdownMenuItem<int?>(
-                              value: book.id,
-                              child: Text(book.naslov ?? ""),
-                            );
-                          }),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedBookId = value;
-                          });
-
-                          loadData();
-                        },
+                  padding: const EdgeInsets.all(12),
+                  child: DropdownButton<int?>(
+                    value: selectedBookId,
+                    isExpanded: true,
+                    hint: const Text("Sve knjige"),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text("Sve knjige"),
                       ),
-                    ),
+                      ...knjige.map(
+                        (b) => DropdownMenuItem(
+                          value: b.id,
+                          child: Text(b.naslov ?? ""),
+                        ),
+                      )
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedBookId = value;
+                      });
+                      loadData();
+                    },
                   ),
                 ),
 
-                const SizedBox(height: 6),
+                /// ⭐ CITAT DANA (NEZAVISAN OD FILTERA)
+                if (citatDana != null) buildCitatDana(),
 
                 Expanded(
                   child: ListView.builder(

@@ -294,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "Dobrodošla 👋",
+                    "Dobrodošla, Ime 👋",
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -433,11 +433,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  buildRandomWishBook(),
-                  const SizedBox(height: 24),
                   buildDailyChallengeCard(),
                   const SizedBox(height: 24),
+                  buildRandomWishBook(),
+                  const SizedBox(height: 24),
+
                   Row(
                     children: [
                       Expanded(
@@ -813,8 +813,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
+           // const SizedBox(height: 12),
+            /*Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 getPriorityIcon(randomBook!.prioritet),
@@ -824,7 +824,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(color: Colors.white),
                 ),
               ],
-            ),
+            ),*/
             const SizedBox(height: 18),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
