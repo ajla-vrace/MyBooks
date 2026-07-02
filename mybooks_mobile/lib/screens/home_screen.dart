@@ -641,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              "🎲 Knjiga za tebe",
+              "✨ Knjiga za tebe",
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
@@ -701,24 +701,69 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 700),
+                tween: Tween(begin: 0.85, end: 1.15),
+                duration: const Duration(milliseconds: 650),
+                curve: Curves.easeInOut,
                 builder: (context, value, child) {
-                  return Transform.rotate(
-                    angle: value * 6.3,
-                    child: const Icon(
-                      Icons.casino,
-                      size: 50,
-                      color: Color(0xFF6D8B74),
+                  return Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6D8B74)
+                              .withOpacity(0.25 + (value - 0.85)),
+                          blurRadius: 30,
+                          spreadRadius: 3,
+                        ),
+                      ],
+                    ),
+                    child: Transform.scale(
+                      scale: value,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF4DD0E1).withOpacity(0.35),
+                              blurRadius: 35,
+                              spreadRadius: 6,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFF6D8B74).withOpacity(0.25),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.psychology_alt,
+                          size: 60,
+                          color: Color(0xFF6D8B74),
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const Text(
-                "Kocka odlučuje tvoju knjigu...",
+                "Preporuka za tebe…",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Analiziram tvoje knjige i raspoloženje čitanja",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ],
           ),
