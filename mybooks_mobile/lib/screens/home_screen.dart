@@ -580,7 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "🔥 Heatmap citati (zadnjih 365 dana)",
+                            "🔥 Tvoja čitalačka aktivnost (zadnjih 365 dana)",
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
