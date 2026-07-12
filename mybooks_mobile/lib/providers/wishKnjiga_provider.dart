@@ -11,8 +11,9 @@ class WishKnjigaProvider extends BaseProvider<WishKnjiga> {
     return WishKnjiga.fromJson(data);
   }
 
-  Future<WishKnjiga?> getRandom() async {
-    var url = "https://localhost:7208/WishKnjiga/random";
+  Future<WishKnjiga?> getRandom(int id) async {
+    //var url = "https://localhost:7208/WishKnjiga/random";
+    var url = "https://localhost:7208/WishKnjiga/random?korisnikId=$id";
    // var url = "${BaseProvider.baseUrl}WishKnjiga/random";
 
     var uri = Uri.parse(url);

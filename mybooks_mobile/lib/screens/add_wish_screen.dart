@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
@@ -62,6 +63,7 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
         "napomena": napomenaController.text,
         "prioritet": prioritet,
         "slikaBase64": base64Image, // 👈 DODANO
+        "korisnikId": Authorization.korisnik!.id,
       };
 
       await provider.insert(request);

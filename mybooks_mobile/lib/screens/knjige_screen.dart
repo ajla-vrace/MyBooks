@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
@@ -58,8 +59,15 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     try {
       var provider = KnjigaProvider();
 
+      /*var result = await provider.get(
+        filter: {
+          if (naslov != null && naslov.isNotEmpty) "Naslov": naslov,
+          if (selectedZanrId != null) "ZanrId": selectedZanrId,
+        },
+      );*/
       var result = await provider.get(
         filter: {
+          "KorisnikId": Authorization.korisnik!.id,
           if (naslov != null && naslov.isNotEmpty) "Naslov": naslov,
           if (selectedZanrId != null) "ZanrId": selectedZanrId,
         },

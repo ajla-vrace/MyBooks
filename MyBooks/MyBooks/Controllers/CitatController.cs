@@ -37,9 +37,9 @@ namespace eSpa.Controllers
             return base.Delete(id);
         }
         [HttpGet("statistika")]
-        public CitatiStatistika GetStatistika()
+        public CitatiStatistika GetStatistika(int korisnikId)
         {
-            return _service.GetStatistika();
+            return _service.GetStatistika(korisnikId);
         }
 
     }

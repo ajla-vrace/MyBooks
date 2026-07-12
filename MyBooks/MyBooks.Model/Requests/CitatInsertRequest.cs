@@ -12,5 +12,6 @@ namespace MyBooks.Model.Requests
         public string? TekstCitata { get; set; }
         public int? BrojStranice { get; set; }
         public bool? JeOmiljeni { get; set; }
+        public int KorisnikId { get; set; }
     }
 }

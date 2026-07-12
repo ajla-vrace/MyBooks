@@ -23,6 +23,10 @@ namespace MyBooks.Service
         public override IQueryable<Database.WishKnjiga> AddFilter(IQueryable<Database.WishKnjiga> query, WishKnjigaSearchObject? search = null)
         {
             var filteredQuery = base.AddFilter(query, search);
+            if (search?.KorisnikId.HasValue == true)
+            {
+                filteredQuery = filteredQuery.Where(x => x.KorisnikId == search.KorisnikId);
+            }
 
             // Ako je korisničko ime i naziv usluge uneseno
 
@@ -70,9 +74,10 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.WishKnjiga>(entity);
         }
-        public async Task<Model.WishKnjiga> GetRandom()
+        public async Task<Model.WishKnjiga> GetRandom(int korisnikId)
         {
-            var query = _context.WishKnjigas.AsQueryable();
+            var query = _context.WishKnjigas
+                .Where(x => x.KorisnikId == korisnikId);
 
             var list = await query.ToListAsync();
 

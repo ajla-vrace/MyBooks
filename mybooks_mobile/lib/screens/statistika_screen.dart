@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 
@@ -23,7 +24,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Future<void> loadData() async {
     try {
       var provider = StatistikaProvider();
-      var result = await provider.getStatistika();
+      var result = await provider.getStatistika(
+  Authorization.korisnik!.id,
+);
 
       setState(() {
         statistika = result;

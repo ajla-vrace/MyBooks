@@ -25,8 +25,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
     /* _baseUrl = const String.fromEnvironment("baseUrl",
     defaultValue: "https://localhost:7031/");*/
     _baseUrl = const String.fromEnvironment("baseUrl",
-    defaultValue: "https://localhost:7208/");
-   /* _baseUrl = const String.fromEnvironment("baseUrl",
+        defaultValue: "https://localhost:7208/");
+    /* _baseUrl = const String.fromEnvironment("baseUrl",
         defaultValue: "https://10.0.2.2:7208/");*/ //za emulator
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
@@ -91,7 +91,8 @@ abstract class BaseProvider<T> with ChangeNotifier {
     print("REQUEST HEADERS: $headers");
 
     var response = await http!.post(uri, headers: headers, body: jsonRequest);
-
+    print("STATUS: ${response.statusCode}");
+    print("BODY: ${response.body}");
     if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
       return fromJson(data);
@@ -111,46 +112,31 @@ abstract class BaseProvider<T> with ChangeNotifier {
     }
   }
 
+  Future<dynamic> postCustom(String action, dynamic request) async {
+    var url = "$_baseUrl$_endpoint/$action";
 
+    var uri = Uri.parse(url);
 
-Future<dynamic> postCustom(
-    String action,
-    dynamic request
-) async {
+    var headers = createHeaders();
 
-  var url = "$_baseUrl$_endpoint/$action";
+    var body = jsonEncode(request);
 
-  var uri = Uri.parse(url);
+    var response = await http!.post(
+      uri,
+      headers: headers,
+      body: body,
+    );
 
-  var headers = createHeaders();
+    if (isValidResponse(response)) {
+      if (response.body.isEmpty) {
+        return null;
+      }
 
-  var body = jsonEncode(request);
-
-
-  var response = await http!.post(
-    uri,
-    headers: headers,
-    body: body,
-  );
-
-
-  if(isValidResponse(response)){
-
-    if(response.body.isEmpty){
-      return null;
+      return jsonDecode(response.body);
     }
 
-    return jsonDecode(response.body);
+    return null;
   }
-
-  return null;
-}
-
-
-
-
-
-
 
   Future<T> update(int id, [dynamic request]) async {
     var url = "$_baseUrl$_endpoint/$id";

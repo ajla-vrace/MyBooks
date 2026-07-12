@@ -15,5 +15,6 @@ namespace MyBooks.Model.Requests
 
         public string? Prioritet { get; set; }
         public string? SlikaBase64 { get; set; }
+        public int KorisnikId { get; set; }
     }
 }

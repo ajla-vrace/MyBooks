@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
@@ -97,6 +98,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         "zanroviIds": selectedZanrovi,
         "isFavorite": isFavorite,
         "mood": selectedMood,
+        "korisnikId": Authorization.korisnik!.id,
       });
 
       if (!mounted) return;

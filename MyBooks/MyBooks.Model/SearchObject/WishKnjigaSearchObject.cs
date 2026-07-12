@@ -12,7 +12,7 @@ namespace MyBooks.Model.SearchObject
 
         //public string? Autor { get; set; }
         //public string? Napomena { get; set; }
-
+        public int? KorisnikId { get; set; }
         public string? Prioritet { get; set; }
     }
 }

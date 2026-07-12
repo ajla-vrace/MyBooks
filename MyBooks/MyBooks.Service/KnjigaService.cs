@@ -32,6 +32,12 @@ namespace MyBooks.Service
             {
                 filteredQuery = filteredQuery.Where(x => x.Autor.Contains(search.Autor));
             }
+
+            if (search?.KorisnikId.HasValue == true)
+            {
+                filteredQuery = filteredQuery.Where(x => x.KorisnikId == search.KorisnikId);
+            }
+
             filteredQuery = filteredQuery
    .Include(x => x.KnjigaZanrs)
        .ThenInclude(x => x.IdZanrNavigation);
@@ -153,12 +159,17 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.Knjiga>(entity);
         }
-        public async Task<StatistikaResponse> GetStatistika()
+        public async Task<StatistikaResponse> GetStatistika(int korisnikId)
         {
-            var knjige = await _context.Knjigas
+            /*var knjige = await _context.Knjigas
                 .Include(x => x.KnjigaZanrs)
                 .ThenInclude(x => x.IdZanrNavigation)
-                .ToListAsync();
+                .ToListAsync();*/
+            var knjige = await _context.Knjigas
+    .Where(x => x.KorisnikId == korisnikId)
+    .Include(x => x.KnjigaZanrs)
+    .ThenInclude(x => x.IdZanrNavigation)
+    .ToListAsync();
 
             var result = new StatistikaResponse();
 
@@ -201,7 +212,19 @@ namespace MyBooks.Service
             }
 
             result.TopZanrovi = sviZanrovi;
+            /* var topAutori = _context.Knjigas
+      .Where(k => !string.IsNullOrEmpty(k.Autor))
+      .GroupBy(k => k.Autor)
+      .Select(g => new AutorStatistika
+      {
+          ImeAutora = g.Key,
+          BrojKnjiga = g.Count()
+      })
+      .OrderByDescending(x => x.BrojKnjiga)
+      .Take(5)
+      .ToList();*/
             var topAutori = _context.Knjigas
+     .Where(k => k.KorisnikId == korisnikId)
      .Where(k => !string.IsNullOrEmpty(k.Autor))
      .GroupBy(k => k.Autor)
      .Select(g => new AutorStatistika
@@ -212,8 +235,24 @@ namespace MyBooks.Service
      .OrderByDescending(x => x.BrojKnjiga)
      .Take(5)
      .ToList();
+
+
             result.TopAutori = topAutori;
+
+            /*
+                        var moodStatistika = await _context.Knjigas
+                .Where(x => x.Mood != null)
+                .GroupBy(x => x.Mood)
+                .Select(g => new MoodStatistika
+                {
+                    Mood = g.Key,
+                    Broj = g.Count()
+                })
+                .OrderByDescending(x => x.Broj)
+                .ToListAsync();*/
+
             var moodStatistika = await _context.Knjigas
+    .Where(x => x.KorisnikId == korisnikId)
     .Where(x => x.Mood != null)
     .GroupBy(x => x.Mood)
     .Select(g => new MoodStatistika

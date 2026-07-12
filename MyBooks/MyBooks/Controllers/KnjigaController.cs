@@ -37,9 +37,9 @@ namespace eSpa.Controllers
             return base.Delete(id);
         }
         [HttpGet("statistika")]
-        public async Task<StatistikaResponse> GetStatistika()
+        public async Task<StatistikaResponse> GetStatistika(int korisnikId)
         {
-            return await _service.GetStatistika();
+            return await _service.GetStatistika(korisnikId);
         }
     }
 }

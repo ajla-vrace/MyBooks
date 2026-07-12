@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'dart:convert';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
@@ -263,10 +264,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> loadData() async {
     try {
       var wishProvider = WishKnjigaProvider();
-      var wishResult = await wishProvider.get();
+      var wishResult = await wishProvider.get(  filter: {"korisnikId": Authorization.korisnik!.id},);
 
       var knjigaProvider = KnjigaProvider();
-      var knjigaResult = await knjigaProvider.get();
+      var knjigaResult = await knjigaProvider.get(  filter: {"korisnikId": Authorization.korisnik!.id},);
 
       setState(() {
         wish = wishResult.result.reversed.toList();

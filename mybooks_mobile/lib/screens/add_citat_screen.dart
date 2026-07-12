@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
@@ -30,7 +31,11 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
 
   Future<void> loadKnjige() async {
     var provider = KnjigaProvider();
-    var result = await provider.get();
+    var result = await provider.get(
+      filter: {
+        "KorisnikId": Authorization.korisnik!.id,
+      },
+    );
 
     setState(() {
       knjige = result.result;
@@ -49,7 +54,8 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
         "idKnjiga": selectedKnjiga!.id,
         "tekstCitata": tekstController.text,
         "brojStranice": int.parse(stranicaController.text),
-        "jeOmiljeni": omiljeni
+        "jeOmiljeni": omiljeni,
+        "korisnikId": Authorization.korisnik!.id,
       };
 
       await provider.insert(request);
@@ -69,14 +75,12 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Dodaj citat")),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-
               // 📚 KNJIGA DROPDOWN
               DropdownButtonFormField<Knjiga>(
                 value: selectedKnjiga,
@@ -94,8 +98,7 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
                 decoration: const InputDecoration(
                   labelText: "Izaberi knjigu",
                 ),
-                validator: (v) =>
-                    v == null ? "Izaberi knjigu" : null,
+                validator: (v) => v == null ? "Izaberi knjigu" : null,
               ),
 
               const SizedBox(height: 10),

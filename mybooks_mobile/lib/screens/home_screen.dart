@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/citat_statistika.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
@@ -22,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int brojCitata = 0;
   Statistika? statistika;
   CitatStatistika? citatStatistika;
-  final int yearlyGoal = 30;
+  //final int yearlyGoal = 30;
 
   WishKnjiga? randomBook;
   bool loadingRandom = false;
@@ -43,16 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> loadData() async {
     try {
       var provider = StatistikaProvider();
-      var result = await provider.getStatistika();
+      var result = await provider.getStatistika(
+        Authorization.korisnik!.id,
+      );
 
       var citatProvider = CitatStatistikaProvider(); // 🔥 OVO
-      var citatResult = await citatProvider.getStatistika(); // 🔥 OVO
+      //var citatResult = await citatProvider.getStatistika(); // 🔥 OVO
+      var citatResult = await citatProvider.getStatistika(
+        Authorization.korisnik!.id,
+      );
       print("CITAT STATISTIKA: ${citatResult.toJson()}");
       for (var c in citatResult.citatiPoDanima ?? []) {
         print("${c.datum} -> ${c.broj}");
       }
-      var citati = await CitatProvider().get();
-
+      //var citati = await CitatProvider().get();
+      var citati = await CitatProvider().get(
+        filter: {"korisnikId": Authorization.korisnik!.id},
+      );
       if (!mounted) return;
 
       setState(() {
@@ -82,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.delayed(const Duration(milliseconds: 600));
     // mala "spin" animacija
 
-    final result = await WishKnjigaProvider().getRandom();
+    final result = await WishKnjigaProvider().getRandom(Authorization.korisnik!.id);
 
     setState(() {
       randomBook = result;
@@ -250,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final topGenre = (genres.isNotEmpty) ? genres.first.naziv ?? "-" : "-";
     final ukupnoKnjiga = statistika?.ukupnoKnjiga ?? 0;
+    final yearlyGoal = Authorization.korisnik?.godisnjiCilj ?? 30;
 
     final progress =
         ukupnoKnjiga >= yearlyGoal ? 1.0 : ukupnoKnjiga / yearlyGoal;
@@ -813,7 +822,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 14,
               ),
             ),
-           // const SizedBox(height: 12),
+            // const SizedBox(height: 12),
             /*Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

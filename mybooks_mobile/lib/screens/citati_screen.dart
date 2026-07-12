@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/citat.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
@@ -14,8 +15,8 @@ class CitatiScreen extends StatefulWidget {
 }
 
 class _CitatiScreenState extends State<CitatiScreen> {
-  List<Citat> citati = [];        // filtrirani
-  List<Citat> allCitati = [];     // SVI citati (za citat dana)
+  List<Citat> citati = []; // filtrirani
+  List<Citat> allCitati = []; // SVI citati (za citat dana)
   List<Knjiga> knjige = [];
 
   bool isLoading = true;
@@ -33,13 +34,27 @@ class _CitatiScreenState extends State<CitatiScreen> {
   Future<void> loadBooks() async {
     try {
       var provider = KnjigaProvider();
-      var result = await provider.get();
+
+      var result = await provider.get(
+        filter: {
+          "KorisnikId": Authorization.korisnik!.id,
+        },
+      );
+
+      print("KORISNIK ID: ${Authorization.korisnik!.id}");
+      print("BROJ KNJIGA DROPDOWN: ${result.result.length}");
+
+      for (var k in result.result) {
+        print("${k.id} - ${k.naslov}");
+      }
+
+      if (!mounted) return;
 
       setState(() {
         knjige = result.result;
       });
     } catch (e) {
-      print(e);
+      print("LOAD BOOKS ERROR: $e");
     }
   }
 
@@ -48,11 +63,14 @@ class _CitatiScreenState extends State<CitatiScreen> {
       var provider = CitatProvider();
 
       // ⭐ SVI CITATI (za daily quote)
-      var allResult = await provider.get();
+      var allResult = await provider.get(
+        filter: {"KorisnikId": Authorization.korisnik!.id},
+      );
 
       // ⭐ FILTRIRANI CITATI (za listu)
       var filteredResult = await provider.get(
         filter: {
+          "KorisnikId": Authorization.korisnik!.id,
           if (selectedBookId != null) "IdKnjiga": selectedBookId,
         },
       );
@@ -83,8 +101,7 @@ class _CitatiScreenState extends State<CitatiScreen> {
 
     final today = DateTime.now();
 
-    final seed =
-        today.year * 10000 + today.month * 100 + today.day;
+    final seed = today.year * 10000 + today.month * 100 + today.day;
 
     final index = seed % allCitati.length;
 
@@ -262,6 +279,10 @@ class _CitatiScreenState extends State<CitatiScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print("DROPDOWN LIST:");
+    for (var k in knjige) {
+      print(k.naslov);
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text("Citati"),

@@ -5,11 +5,10 @@ import 'package:http/io_client.dart';
 import 'package:mybooks_mobile/models/citat_statistika.dart';
 
 class CitatStatistikaProvider {
-  static const String baseUrl =
-      String.fromEnvironment("baseUrl", 
+  static const String baseUrl = String.fromEnvironment("baseUrl",
       defaultValue: "https://localhost:7208/");
-      
-      //defaultValue: "http://10.0.2.2:5208/"); //za emualtor
+
+  //defaultValue: "http://10.0.2.2:5208/"); //za emualtor
 
   final HttpClient client = HttpClient()
     ..badCertificateCallback = (cert, host, port) => true;
@@ -20,9 +19,9 @@ class CitatStatistikaProvider {
     http = IOClient(client);
   }
 
-  Future<CitatStatistika> getStatistika() async {
-    var uri = Uri.parse("${baseUrl}Citat/statistika");
-
+  Future<CitatStatistika> getStatistika(int korisnikId) async {
+    //var uri = Uri.parse("${baseUrl}Citat/statistika");
+    var uri = Uri.parse("${baseUrl}Citat/statistika?korisnikId=$korisnikId");
     String basicAuth = "Basic ${base64Encode(utf8.encode('proba:proba'))}";
 
     var headers = {

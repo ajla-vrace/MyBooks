@@ -10,6 +10,6 @@ namespace MyBooks.Service
 {
     public interface IKnjigaService : ICRUDService<Model.Knjiga, Model.SearchObject.KnjigaSearchObject, Model.Requests.KnjigaInsertRequest, Model.Requests.KnjigaUpdateRequest>
     {
-        Task<StatistikaResponse> GetStatistika();
+        Task<StatistikaResponse> GetStatistika(int korisnikId);
     }
 }

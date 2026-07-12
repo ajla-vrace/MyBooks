@@ -21,9 +21,10 @@ class StatistikaProvider {
     http = IOClient(client);
   }
 
-  Future<Statistika> getStatistika() async {
+  Future<Statistika> getStatistika(int korisnikId)async {
  // var uri = Uri.parse("${baseUrl}Statistika");
- var uri = Uri.parse("${baseUrl}Knjiga/statistika");
+ //var uri = Uri.parse("${baseUrl}Knjiga/statistika");
+ var uri = Uri.parse("${baseUrl}Knjiga/statistika?korisnikId=$korisnikId");
 print("uri: $uri");
   String username = "proba";
   String password = "proba";

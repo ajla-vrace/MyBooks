@@ -37,9 +37,9 @@ namespace eSpa.Controllers
             return base.Delete(id);
         }
         [HttpGet("random")]
-        public async Task<WishKnjiga?> GetRandom()
+        public async Task<WishKnjiga?> GetRandom(int korisnikId)
         {
-            return await _service.GetRandom();
+            return await _service.GetRandom(korisnikId);
         }
 
     }

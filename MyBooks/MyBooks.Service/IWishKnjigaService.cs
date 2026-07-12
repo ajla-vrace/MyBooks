@@ -10,6 +10,6 @@ namespace MyBooks.Service
 {
     public interface IWishKnjigaService : ICRUDService<Model.WishKnjiga, Model.SearchObject.WishKnjigaSearchObject, Model.Requests.WishKnjigaInsertRequest, Model.Requests.WishKnjigaUpdateRequest>
     {
-        Task<Model.WishKnjiga?> GetRandom();
+        Task<Model.WishKnjiga?> GetRandom(int korisnikId);
     }
 }

@@ -32,6 +32,10 @@ namespace MyBooks.Service
             {
                 filteredQuery = filteredQuery.Where(x => x.IdKnjiga == search.IdKnjiga);
             }
+            if (search?.KorisnikId.HasValue == true)
+            {
+                filteredQuery = filteredQuery.Where(x => x.IdKnjigaNavigation.KorisnikId == search.KorisnikId);
+            }
 
             return filteredQuery;
         }
@@ -70,12 +74,17 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.Citat>(entity);
         }
-        public CitatiStatistika GetStatistika()
+        public CitatiStatistika GetStatistika(int korisnikId)
         {
             var danas = DateTime.Today;
 
-            // 🔥 DISTINCT DANI
-            var citati = _context.Citats
+            // Samo citati prijavljenog korisnika
+            var userCitati = _context.Citats
+                .Include(c => c.IdKnjigaNavigation)
+                .Where(c => c.IdKnjigaNavigation.KorisnikId == korisnikId);
+
+            // DISTINCT DANI
+            var citati = userCitati
                 .Where(c => c.DatumKreiranja.HasValue)
                 .Select(c => c.DatumKreiranja.Value.Date)
                 .Distinct()
@@ -84,14 +93,13 @@ namespace MyBooks.Service
 
             bool dodanoDanas = citati.Contains(danas);
 
-            var danasnjiCitat = _context.Citats
-     .Include(c => c.IdKnjigaNavigation)
-     .Where(c => c.DatumKreiranja.HasValue &&
-                 c.DatumKreiranja.Value.Date == danas)
-     .OrderByDescending(c => c.DatumKreiranja)
-     .FirstOrDefault();
+            var danasnjiCitat = userCitati
+                .Where(c => c.DatumKreiranja.HasValue &&
+                            c.DatumKreiranja.Value.Date == danas)
+                .OrderByDescending(c => c.DatumKreiranja)
+                .FirstOrDefault();
 
-            // 🔥 CURRENT STREAK
+            // CURRENT STREAK
             int trenutniNiz = 0;
             var checkDate = danas;
 
@@ -108,7 +116,7 @@ namespace MyBooks.Service
                 }
             }
 
-            // 🔥 NAJDUŽI STREAK
+            // NAJDUŽI STREAK
             int maxStreak = 0;
             int temp = 0;
             DateTime? prev = null;
@@ -128,8 +136,8 @@ namespace MyBooks.Service
                 prev = d;
             }
 
-            // 🔥 CITATI PO DANIMA (HEATMAP DATA)
-            var citatiPoDanima = _context.Citats
+            // Heatmap
+            var citatiPoDanima = userCitati
                 .Where(c => c.DatumKreiranja.HasValue)
                 .GroupBy(c => c.DatumKreiranja.Value.Date)
                 .Select(g => new CitatPoDanu
@@ -148,8 +156,6 @@ namespace MyBooks.Service
                 TekstCitata = danasnjiCitat?.TekstCitata,
                 NazivKnjige = danasnjiCitat?.IdKnjigaNavigation?.Naslov,
                 BrojStranice = danasnjiCitat?.BrojStranice,
-
-                // 🔥 OVO JE KLJUČNO
                 CitatiPoDanima = citatiPoDanima
             };
         }

@@ -18,7 +18,7 @@ namespace MyBooks.Model.Requests
         public string Autor { get; set; } = null!;
         public string? Opis { get; set; }
         public int? Ocjena { get; set; }
-       
+        public int KorisnikId { get; set; }
         public string? Status { get; set; }
         public string? Recenzija { get; set; }
         public bool IsFavorite { get; set; }
