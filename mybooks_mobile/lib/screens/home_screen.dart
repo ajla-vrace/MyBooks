@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Statistika? statistika;
   CitatStatistika? citatStatistika;
   //final int yearlyGoal = 30;
-
+  int brojFavorita = 0;
   WishKnjiga? randomBook;
   bool loadingRandom = false;
   bool hasPicked = false;
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
           "KorisnikId": korisnikId,
         },
       );
-
+      var favoriti = knjige.result.where((x) => x.isFavorite == true).length;
       // provjera ima li korisnik wish knjiga
       var wishKnjige = await WishKnjigaProvider().get(
         filter: {
@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
         citatStatistika = citatResult;
 
         brojCitata = citati.result.length;
-
+        brojFavorita = favoriti;
         // 🔥 provjere za prikaz kartica
         imaKnjiga = knjige.result.isNotEmpty;
 
@@ -535,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: buildInfoCard(
                           "Favoriti",
-                          "0",
+                          "$brojFavorita",
                           Icons.favorite,
                         ),
                       ),
