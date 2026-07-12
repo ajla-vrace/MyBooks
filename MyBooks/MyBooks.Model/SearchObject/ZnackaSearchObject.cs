@@ -1,0 +1,16 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace MyBooks.Model.SearchObject
+{
+    public class ZnackaSearchObject : BaseSearchObject
+    {
+        public string? Naziv { get; set; }
+       // public string? Autor { get; set; }
+        //public int? ZanrId { get; set; }
+        //public string? Status { get; set; }
+    }
+}

@@ -111,6 +111,47 @@ abstract class BaseProvider<T> with ChangeNotifier {
     }
   }
 
+
+
+Future<dynamic> postCustom(
+    String action,
+    dynamic request
+) async {
+
+  var url = "$_baseUrl$_endpoint/$action";
+
+  var uri = Uri.parse(url);
+
+  var headers = createHeaders();
+
+  var body = jsonEncode(request);
+
+
+  var response = await http!.post(
+    uri,
+    headers: headers,
+    body: body,
+  );
+
+
+  if(isValidResponse(response)){
+
+    if(response.body.isEmpty){
+      return null;
+    }
+
+    return jsonDecode(response.body);
+  }
+
+  return null;
+}
+
+
+
+
+
+
+
   Future<T> update(int id, [dynamic request]) async {
     var url = "$_baseUrl$_endpoint/$id";
     var uri = Uri.parse(url);

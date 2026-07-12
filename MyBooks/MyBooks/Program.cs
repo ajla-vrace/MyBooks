@@ -19,6 +19,10 @@ builder.Services.AddTransient<ICitatService, CitatService>();
 builder.Services.AddTransient<IWishKnjigaService, WishKnjigaService>();
 builder.Services.AddTransient<IKnjigaZanrService, KnjigaZanrService>();
 
+builder.Services.AddTransient<IKorisnikService, KorisnikService>();
+//builder.Services.AddTransient<IZnackaService, ZnackaService>();
+//builder.Services.AddTransient<IKorisnikZnackaService, KorisnikZnackaService>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

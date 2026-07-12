@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace MyBooks.Service.Database
 {
-    [Table("Knjiga")]
     public partial class Knjiga
     {
         public Knjiga()
@@ -15,30 +11,24 @@ namespace MyBooks.Service.Database
             KnjigaZanrs = new HashSet<KnjigaZanr>();
         }
 
-        [Key]
         public int Id { get; set; }
-        [StringLength(255)]
+        public int KorisnikId { get; set; }
         public string Naslov { get; set; } = null!;
-        [StringLength(255)]
         public string Autor { get; set; } = null!;
         public string? Opis { get; set; }
+        public string? Biljeske { get; set; }
         public int? Ocjena { get; set; }
-        [StringLength(50)]
         public string? Status { get; set; }
         public string? Recenzija { get; set; }
-        [Column(TypeName = "date")]
-        public DateTime? DatumPocetka { get; set; }
-        [Column(TypeName = "date")]
-        public DateTime? DatumZavrsetka { get; set; }
-        [Column(TypeName = "datetime")]
-        public DateTime? DatumKreiranja { get; set; }
-        public byte[]? Slika { get; set; }
-        public bool IsFavorite { get; set; } = false;
         public string? Mood { get; set; }
+        public bool? IsFavorite { get; set; }
+        public byte[]? Slika { get; set; }
+        public DateTime? DatumPocetka { get; set; }
+        public DateTime? DatumZavrsetka { get; set; }
+        public DateTime? DatumKreiranja { get; set; }
 
-        [InverseProperty(nameof(Citat.IdKnjigaNavigation))]
+        public virtual Korisnik Korisnik { get; set; } = null!;
         public virtual ICollection<Citat> Citats { get; set; }
-        [InverseProperty(nameof(KnjigaZanr.IdKnjigaNavigation))]
         public virtual ICollection<KnjigaZanr> KnjigaZanrs { get; set; }
     }
 }

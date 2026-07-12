@@ -11,6 +11,7 @@ namespace MyBooks.Model
     {
         public int Id { get; set; }
         public int IdKnjiga { get; set; }
+        public int KorisnikId { get; set; }
         public string? TekstCitata { get; set; }
         public int? BrojStranice { get; set; }
         public bool? JeOmiljeni { get; set; }

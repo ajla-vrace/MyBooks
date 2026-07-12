@@ -38,6 +38,18 @@ namespace MyBooks.Service
             CreateMap<Model.Requests.KnjigaZanrInsertRequest, Database.KnjigaZanr>();
             CreateMap<Model.Requests.KnjigaZanrUpdateRequest, Database.KnjigaZanr>();
 
+            CreateMap<Database.Korisnik, Model.Korisnik>();
+            CreateMap<Model.Requests.KorisnikInsertRequest, Database.Korisnik>();
+            CreateMap<Model.Requests.KorisnikUpdateRequest, Database.Korisnik>();
+
+            /*CreateMap<Database.Znacka, Model.Znacka>();
+            CreateMap<Model.Requests.ZnackaInsertRequest, Database.Znacka>();
+            CreateMap<Model.Requests.ZnackaUpdateRequest, Database.Znacka>();
+
+            CreateMap<Database.KorisnikZnacka, Model.KorisnikZnacka>();
+            CreateMap<Model.Requests.KorisnikZnackaInsertRequest, Database.KorisnikZnacka>();
+            CreateMap<Model.Requests.KorisnikZnackaUpdateRequest, Database.KorisnikZnacka>();*/
+
 
 
         }

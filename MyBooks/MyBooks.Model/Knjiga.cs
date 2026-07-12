@@ -12,6 +12,7 @@ namespace MyBooks.Model
     {
 
         public int Id { get; set; }
+        public int KorisnikId { get; set; }
         public string Naslov { get; set; } = null!;
       
         public string Autor { get; set; } = null!;
