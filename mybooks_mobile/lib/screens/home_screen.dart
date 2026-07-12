@@ -5,6 +5,7 @@ import 'package:mybooks_mobile/models/citat_statistika.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
 import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
+import 'package:mybooks_mobile/providers/knjiga_provider.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
@@ -29,53 +30,98 @@ class _HomeScreenState extends State<HomeScreen> {
   bool loadingRandom = false;
   bool hasPicked = false;
 
+  bool imaKnjiga = false;
+  bool imaWishKnjiga = false;
+
   @override
   void initState() {
     super.initState();
     loadData();
   }
 
-  @override
+  /*@override
   void didChangeDependencies() {
     super.didChangeDependencies();
     loadData();
-  }
+  }*/
 
   Future<void> loadData() async {
     try {
+      var korisnikId = Authorization.korisnik!.id;
+
+      // statistika
       var provider = StatistikaProvider();
+
       var result = await provider.getStatistika(
-        Authorization.korisnik!.id,
+        korisnikId,
       );
 
-      var citatProvider = CitatStatistikaProvider(); // 🔥 OVO
-      //var citatResult = await citatProvider.getStatistika(); // 🔥 OVO
+      // statistika citata
+      var citatProvider = CitatStatistikaProvider();
+
       var citatResult = await citatProvider.getStatistika(
-        Authorization.korisnik!.id,
+        korisnikId,
       );
+
       print("CITAT STATISTIKA: ${citatResult.toJson()}");
+
       for (var c in citatResult.citatiPoDanima ?? []) {
         print("${c.datum} -> ${c.broj}");
       }
-      //var citati = await CitatProvider().get();
+
+      // broj citata korisnika
       var citati = await CitatProvider().get(
-        filter: {"korisnikId": Authorization.korisnik!.id},
+        filter: {
+          "KorisnikId": korisnikId,
+        },
       );
+
+      // provjera ima li korisnik knjiga
+      var knjige = await KnjigaProvider().get(
+        filter: {
+          "KorisnikId": korisnikId,
+        },
+      );
+
+      // provjera ima li korisnik wish knjiga
+      var wishKnjige = await WishKnjigaProvider().get(
+        filter: {
+          "KorisnikId": korisnikId,
+        },
+      );
+
       if (!mounted) return;
 
       setState(() {
         statistika = result;
+
         citatStatistika = citatResult;
+
         brojCitata = citati.result.length;
+
+        // 🔥 provjere za prikaz kartica
+        imaKnjiga = knjige.result.isNotEmpty;
+
+        imaWishKnjiga = wishKnjige.result.isNotEmpty;
+
         isLoading = false;
       });
     } catch (e) {
+      print("GREŠKA HOME LOAD DATA: $e");
+
       if (!mounted) return;
 
       setState(() {
         statistika = null;
+
         citatStatistika = null;
+
         brojCitata = 0;
+
+        imaKnjiga = false;
+
+        imaWishKnjiga = false;
+
         isLoading = false;
       });
     }
@@ -90,7 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.delayed(const Duration(milliseconds: 600));
     // mala "spin" animacija
 
-    final result = await WishKnjigaProvider().getRandom(Authorization.korisnik!.id);
+    final result =
+        await WishKnjigaProvider().getRandom(Authorization.korisnik!.id);
 
     setState(() {
       randomBook = result;
@@ -442,10 +489,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  buildDailyChallengeCard(),
-                  const SizedBox(height: 24),
-                  buildRandomWishBook(),
-                  const SizedBox(height: 24),
+                  /*buildDailyChallengeCard(),
+                  const SizedBox(height: 24),*/
+                  if (imaKnjiga) ...[
+                    buildDailyChallengeCard(),
+                    const SizedBox(height: 24),
+                  ],
+                  /*buildRandomWishBook(),
+                  const SizedBox(height: 24),*/
+                  if (imaWishKnjiga) ...[
+                    buildRandomWishBook(),
+                    const SizedBox(height: 24),
+                  ],
 
                   Row(
                     children: [
