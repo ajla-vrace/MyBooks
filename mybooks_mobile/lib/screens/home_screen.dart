@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool imaKnjiga = false;
   bool imaWishKnjiga = false;
-
+  final currentYear = DateTime.now().year;
   @override
   void initState() {
     super.initState();
@@ -349,8 +349,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Dobrodošla, Ime 👋",
+                  Text(
+                    "Dobrodošla, ${Authorization.korisnik?.ime}👋",
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -399,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
-                                "Cilj čitanja 2026",
+                                "Cilj čitanja {currentYear}",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
