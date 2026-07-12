@@ -397,9 +397,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : const Color(0xFF6D8B74),
                             ),
                             const SizedBox(width: 8),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                "Cilj čitanja {currentYear}",
+                                "Cilj čitanja $currentYear",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
