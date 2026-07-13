@@ -12,6 +12,7 @@ namespace MyBooks.Model
         public int KorisnikId { get; set; }
         public int ZnackaId { get; set; }
         public DateTime? DatumOtkljucavanja { get; set; }
+        public Znacka Znacka { get; set; } = null!;
 
     }
 }

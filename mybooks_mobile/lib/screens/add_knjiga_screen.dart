@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
+import 'package:mybooks_mobile/models/znacka.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
+import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/zanr_provider.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mybooks_mobile/data/moods.dart';
+import 'package:mybooks_mobile/providers/znacke_provider.dart';
+import 'package:confetti/confetti.dart';
 
 class AddKnjigaScreen extends StatefulWidget {
   const AddKnjigaScreen({super.key});
@@ -33,11 +37,37 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   final ScrollController _scrollController = ScrollController();
   List<Zanr> zanrovi = [];
   List<int> selectedZanrovi = [];
+  List<Znacka> sveZnacke = [];
+  late ConfettiController confettiController;
 
   @override
   void initState() {
     super.initState();
+
     loadZanrovi();
+    loadZnacke();
+
+    confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  Future<void> loadZnacke() async {
+    try {
+      var provider = ZnackaProvider();
+
+      var result = await provider.get();
+
+      sveZnacke = result.result;
+
+      print("UCITANE ZNACKE: ${sveZnacke.length}");
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 
   Future<void> loadZanrovi() async {
@@ -52,10 +82,13 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
   @override
   void dispose() {
+    confettiController.dispose();
+
     naslovController.dispose();
     autorController.dispose();
     opisController.dispose();
     recenzijaController.dispose();
+
     super.dispose();
   }
 
@@ -85,6 +118,16 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
     setState(() => isLoading = true);
 
     try {
+      // Broj znački prije dodavanja knjige
+      var znackePrije = await KorisnikZnackaProvider().get(
+        filter: {
+          "idKorisnik": Authorization.korisnik!.id,
+        },
+      );
+
+      int brojZnackiPrije = znackePrije.result.length;
+
+      // Dodavanje knjige
       var provider = KnjigaProvider();
 
       await provider.insert({
@@ -101,13 +144,38 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         "korisnikId": Authorization.korisnik!.id,
       });
 
+      // Sačekaj da backend upiše značku
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      );
+
+      // Broj znački poslije dodavanja knjige
+      var znackePoslije = await KorisnikZnackaProvider().get(
+        filter: {
+          "idKorisnik": Authorization.korisnik!.id,
+        },
+      );
+
+      // Ako je osvojena nova značka
+      if (znackePoslije.result.length > brojZnackiPrije) {
+        var nova = znackePoslije.result.last;
+
+        var badge = sveZnacke.firstWhere(
+          (x) => x.id == nova.znackaId,
+        );
+
+        showAchievementDialog(badge);
+      }
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Knjiga uspješno dodana 🎉"),
           backgroundColor: Colors.green,
         ),
       );
+
       _formKey.currentState?.reset();
 
       naslovController.clear();
@@ -123,20 +191,184 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         isFavorite = false;
         selectedMood = null;
       });
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
+
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Greška: $e")),
+        SnackBar(
+          content: Text("Greška: $e"),
+        ),
       );
     }
 
     setState(() => isLoading = false);
+  }
+
+  Future<void> provjeriDobijenuZnacku() async {
+    try {
+      var provider = KorisnikZnackaProvider();
+
+      var rezultat = await provider.get(
+        filter: {"idKorisnik": Authorization.korisnik!.id},
+      );
+
+      if (rezultat.result.isEmpty) return;
+
+      // uzmemo zadnju osvojenu značku
+      var zadnja = rezultat.result.last;
+
+      var znackeProvider = ZnackaProvider();
+
+      var sve = await znackeProvider.get();
+
+      var znacka = sve.result.firstWhere((x) => x.id == zadnja.znackaId);
+
+      showAchievementDialog(znacka);
+    } catch (e) {
+      print("GRESKA PROVJERA ZNACKE: $e");
+    }
+  }
+
+  Future<void> provjeriNovuZnacku(
+    int prije,
+    int poslije,
+  ) async {
+    print("STARE KNJIGE: $prije");
+    print("NOVE KNJIGE: $poslije");
+
+    if (sveZnacke.isEmpty) {
+      await loadZnacke();
+    }
+
+    print("SVE ZNACKE:");
+    for (var z in sveZnacke) {
+      print("${z.id} - ${z.naziv}");
+    }
+
+    var znackeProvider = KorisnikZnackaProvider();
+
+    var rezultat = await znackeProvider.get(
+      filter: {"idKorisnik": Authorization.korisnik!.id},
+    );
+
+    var otkljucane = rezultat.result.map((x) => x.znackaId).toList();
+
+    print("OTKLJUCANE:");
+    print(otkljucane);
+
+    Znacka? nova;
+
+    if (prije < 1 && poslije >= 1) {
+      print("POKUSAVAM PRVU ZNACKU");
+
+      nova = sveZnacke.firstWhere(
+        (x) => x.id == 1,
+      );
+    }
+
+    if (nova != null) {
+      print("PRONADJENA ZNACKA ${nova.naziv}");
+
+      showAchievementDialog(nova);
+    }
+  }
+
+  void showAchievementDialog(
+    Znacka znacka,
+  ) {
+    confettiController.play();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.amber.withOpacity(0.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.6),
+                          blurRadius: 25,
+                          spreadRadius: 5,
+                        )
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        znacka.ikonica ?? "🏅",
+                        style: const TextStyle(
+                          fontSize: 55,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Nova značka otključana 🎉",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    znacka.naziv ?? "",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF1B5E20),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    znacka.opis ?? "",
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              actions: [
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      "Nastavi čitati 📚",
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+            ConfettiWidget(
+              confettiController: confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 50,
+              gravity: 0.2,
+            )
+          ],
+        );
+      },
+    );
   }
 
   InputDecoration inputStyle(String label) {

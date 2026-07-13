@@ -8,6 +8,6 @@ namespace MyBooks.Service
 {
     public interface IKorisnikZnackaService : ICRUDService<Model.KorisnikZnacka, Model.SearchObject.KorisnikZnackaSearchObject, Model.Requests.KorisnikZnackaInsertRequest, Model.Requests.KorisnikZnackaUpdateRequest>
     {
-
+        Task ProvjeriZnacke(int korisnikId);
     }
 }

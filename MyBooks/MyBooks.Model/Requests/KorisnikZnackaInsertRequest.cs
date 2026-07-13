@@ -8,5 +8,8 @@ namespace MyBooks.Model.Requests
 {
     public class KorisnikZnackaInsertRequest
     {
+        public int IdKorisnik { get; set; }
+        public int IdZnacka { get; set; }
     }
 }
+

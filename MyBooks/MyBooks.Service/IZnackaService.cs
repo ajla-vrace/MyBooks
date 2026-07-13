@@ -8,6 +8,7 @@ namespace MyBooks.Service
 {
     public interface IZnackaService : ICRUDService<Model.Znacka, Model.SearchObject.ZnackaSearchObject, Model.Requests.ZnackaInsertRequest, Model.Requests.ZnackaUpdateRequest>
     {
-       // Task<StatistikaResponse> GetStatistika();
+        // Task<StatistikaResponse> GetStatistika();
+      
     }
 }

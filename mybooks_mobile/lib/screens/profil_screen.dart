@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
 import 'dart:convert';
 import 'package:mybooks_mobile/models/knjiga.dart';
+import 'package:mybooks_mobile/models/korisnik_znacka.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
+import 'package:mybooks_mobile/models/znacka.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
+import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
+import 'package:mybooks_mobile/providers/znacke_provider.dart';
 import 'package:mybooks_mobile/screens/add_wish_screen.dart';
+import 'package:mybooks_mobile/screens/login_screen.dart';
 
 /// Zvijezda koja "živi" - blago pulsira sjajem i veličinom, svaka svojim
 /// tempom (seed po knjizi), tako da cijelo sazviježđe djeluje živo i asinhrono.
@@ -251,6 +256,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<WishKnjiga> wish = [];
   List<Knjiga> favorites = [];
   List<Knjiga> procitane = [];
+  List<Znacka> sveZnacke = [];
+  List<int> otkljucaneZnacke = [];
+  List<KorisnikZnacka> znacke = [];
   String? selectedStarKey;
 
   bool isLoading = true;
@@ -264,16 +272,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> loadData() async {
     try {
       var wishProvider = WishKnjigaProvider();
-      var wishResult = await wishProvider.get(  filter: {"korisnikId": Authorization.korisnik!.id},);
+      var wishResult = await wishProvider.get(
+        filter: {"korisnikId": Authorization.korisnik!.id},
+      );
 
       var knjigaProvider = KnjigaProvider();
-      var knjigaResult = await knjigaProvider.get(  filter: {"korisnikId": Authorization.korisnik!.id},);
+      var knjigaResult = await knjigaProvider.get(
+        filter: {"korisnikId": Authorization.korisnik!.id},
+      );
+
+      var znackaProvider = KorisnikZnackaProvider();
+
+      var znackaResult = await znackaProvider.get(
+        filter: {"idKorisnik": Authorization.korisnik!.id},
+      );
+      var sveZnackeProvider = ZnackaProvider();
+
+      var sveZnackeResult = await sveZnackeProvider.get();
 
       setState(() {
         wish = wishResult.result.reversed.toList();
         favorites = knjigaResult.result.where((k) => k.isFavorite).toList();
         // Sve knjige u tabeli su već pročitane, pa se ne filtrira po statusu.
         procitane = knjigaResult.result;
+        sveZnacke = sveZnackeResult.result;
+        znacke = znackaResult.result;
+        otkljucaneZnacke = znackaResult.result.map((x) => x.znackaId!).toList();
         isLoading = false;
       });
     } catch (e) {
@@ -854,8 +878,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             /// ❤️ FAVORITES
                             ExpansionTile(
-                              leading:
-                                  const Icon(Icons.favorite,  color: Color(0xFF1B5E20)),
+                              leading: const Icon(Icons.favorite,
+                                  color: Color(0xFF1B5E20)),
                               title: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -1288,33 +1312,244 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 10),
 
                             /// 🏅 ZNAČKE (uskoro - trenutno samo placeholder)
+                            /// 🏅 ZNAČKE
+                            /// 🏅 ZNAČKE
                             ExpansionTile(
-                              leading: Icon(Icons.workspace_premium,
-                                  color: Color(0xFF1B5E20)),
+                              leading: const Icon(
+                                Icons.workspace_premium,
+                                color: Color(0xFF1B5E20),
+                              ),
                               title: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                                children: const [
                                   Text(
                                     "Značke",
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   SizedBox(height: 2),
                                   Text(
                                     "Nagrade za tvoje čitalačke podvige",
                                     style: TextStyle(
-                                        fontSize: 12, color: Colors.grey),
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ],
                               ),
                               children: [
-                                Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: Text(
-                                    "Značke uskoro stižu 🏅",
-                                    style: TextStyle(color: Colors.grey),
+                                if (sveZnacke.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Text(
+                                      "Nema dostupnih znački 🏅",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Wrap(
+                                      spacing: 18,
+                                      runSpacing: 20,
+                                      children: sveZnacke.map((znacka) {
+                                        final bool otkljucana = otkljucaneZnacke
+                                            .contains(znacka.id);
+
+                                        DateTime? datum;
+
+                                        if (otkljucana) {
+                                          final korisnikZnacka =
+                                              znacke.firstWhere(
+                                            (x) => x.znackaId == znacka.id,
+                                          );
+
+                                          datum =
+                                              korisnikZnacka.datumOtkljucavanja;
+                                        }
+
+                                        return Builder(
+                                          builder: (context) {
+                                            return GestureDetector(
+                                              onTap: () {
+                                                final RenderBox box =
+                                                    context.findRenderObject()
+                                                        as RenderBox;
+
+                                                final Offset position =
+                                                    box.localToGlobal(
+                                                  Offset.zero,
+                                                );
+
+                                                showMenu(
+                                                  context: context,
+                                                  position:
+                                                      RelativeRect.fromLTRB(
+                                                    position.dx - 40,
+                                                    position.dy - 170,
+                                                    position.dx + 120,
+                                                    position.dy,
+                                                  ),
+                                                  items: [
+                                                    PopupMenuItem(
+                                                      enabled: false,
+                                                      child: SizedBox(
+                                                        width: 220,
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                Text(
+                                                                  znacka.ikonica ??
+                                                                      "🏅",
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontSize:
+                                                                        28,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    znacka.naziv ??
+                                                                        "",
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            const SizedBox(
+                                                              height: 10,
+                                                            ),
+                                                            Text(
+                                                              znacka.opis ??
+                                                                  "Nema opisa",
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontSize: 13,
+                                                              ),
+                                                            ),
+                                                            if (otkljucana &&
+                                                                datum !=
+                                                                    null) ...[
+                                                              const SizedBox(
+                                                                height: 10,
+                                                              ),
+                                                              Text(
+                                                                "🏆 Otključano\n"
+                                                                "${datum.day}."
+                                                                "${datum.month}."
+                                                                "${datum.year}",
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .green,
+                                                                  fontSize: 12,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                            ]
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    )
+                                                  ],
+                                                );
+                                              },
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 75,
+                                                    height: 75,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: otkljucana
+                                                          ? Colors.amber
+                                                              .withOpacity(0.15)
+                                                          : Colors.grey
+                                                              .withOpacity(
+                                                                  0.15),
+                                                      border: Border.all(
+                                                        color: otkljucana
+                                                            ? Colors.amber
+                                                            : Colors
+                                                                .grey.shade400,
+                                                        width: 1.5,
+                                                      ),
+                                                      boxShadow: otkljucana
+                                                          ? [
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .amber
+                                                                    .withOpacity(
+                                                                        0.25),
+                                                                blurRadius: 12,
+                                                              )
+                                                            ]
+                                                          : [],
+                                                    ),
+                                                    child: Center(
+                                                      child: Opacity(
+                                                        opacity: otkljucana
+                                                            ? 1
+                                                            : 0.25,
+                                                        child: Text(
+                                                          znacka.ikonica ??
+                                                              "🏅",
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 42,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                    height: 8,
+                                                  ),
+                                                  SizedBox(
+                                                    width: 90,
+                                                    child: Text(
+                                                      znacka.naziv ?? "",
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: otkljucana
+                                                            ? Colors.black
+                                                            : Colors.grey,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      }).toList(),
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
 
@@ -1323,6 +1558,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const ListTile(
                               leading: Icon(Icons.settings),
                               title: Text("Settings"),
+                            ),
+
+                            const Divider(),
+
+                            ListTile(
+                              leading: const Icon(
+                                Icons.logout,
+                                color: Colors.red,
+                              ),
+                              title: const Text(
+                                "Odjava",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onTap: () async {
+                                final potvrda = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text("Odjava"),
+                                      content: const Text(
+                                        "Da li ste sigurni da se želite odjaviti?",
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, false);
+                                          },
+                                          child: const Text("Odustani"),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context, true);
+                                          },
+                                          child: const Text(
+                                            "Odjavi se",
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (potvrda == true) {
+                                  Authorization.korisnik = null;
+
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
+                              },
                             ),
                           ],
                         ),

@@ -15,11 +15,16 @@ namespace MyBooks.Service
 {
     public class KnjigaService : BaseCRUDService<Model.Knjiga, Database.Knjiga, KnjigaSearchObject, KnjigaInsertRequest, KnjigaUpdateRequest>, IKnjigaService
     {
-        public KnjigaService(MyBooksContext context, IMapper mapper) : base(context, mapper)
+        private readonly IKorisnikZnackaService _korisnikZnackaService;
+        public KnjigaService(
+     MyBooksContext context,
+     IMapper mapper,
+     IKorisnikZnackaService korisnikZnackaService)
+     : base(context, mapper)
         {
-
+            _korisnikZnackaService = korisnikZnackaService;
         }
-       
+
         public override IQueryable<Database.Knjiga> AddFilter(IQueryable<Database.Knjiga> query, KnjigaSearchObject? search = null)
         {
             var filteredQuery = base.AddFilter(query, search);
@@ -132,6 +137,9 @@ namespace MyBooks.Service
                 }
 
                 await _context.SaveChangesAsync();
+
+                await _korisnikZnackaService
+    .ProvjeriZnacke(entity.KorisnikId);
             }
 
             var knjiga = await _context.Knjigas
