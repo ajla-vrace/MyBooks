@@ -4,26 +4,16 @@ part 'znacka.g.dart';
 
 @JsonSerializable()
 class Znacka {
-
   int id;
   String naziv;
   String? opis;
   String? ikonica;
+  String tip;
+  int prag;
 
+  Znacka(this.id, this.naziv, this.opis, this.ikonica, this.tip, this.prag);
 
-  Znacka(
-    this.id,
-    this.naziv,
-    this.opis,
-    this.ikonica,
-  );
+  factory Znacka.fromJson(Map<String, dynamic> json) => _$ZnackaFromJson(json);
 
-
-  factory Znacka.fromJson(Map<String,dynamic> json)
-      => _$ZnackaFromJson(json);
-
-
-  Map<String,dynamic> toJson()
-      => _$ZnackaToJson(this);
-
+  Map<String, dynamic> toJson() => _$ZnackaToJson(this);
 }

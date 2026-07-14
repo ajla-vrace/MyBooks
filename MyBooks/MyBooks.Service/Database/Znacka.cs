@@ -14,6 +14,8 @@ namespace MyBooks.Service.Database
         public string Naziv { get; set; } = null!;
         public string? Opis { get; set; }
         public string? Ikonica { get; set; }
+        public string Tip { get; set; } = null!;
+        public int Prag { get; set; }
 
         public virtual ICollection<KorisnikZnacka> KorisnikZnackas { get; set; }
     }

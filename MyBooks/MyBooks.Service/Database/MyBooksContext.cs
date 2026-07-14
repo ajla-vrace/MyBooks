@@ -30,7 +30,7 @@ namespace MyBooks.Service.Database
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-                optionsBuilder.UseSqlServer("Server=.;Database=MyBooks;Trusted_Connection=True;TrustServerCertificate=True;");
+                optionsBuilder.UseSqlServer("Server=.;Database=MyBooks;Trusted_Connection=True;TrustServerCertificate=True");
             }
         }
 
@@ -50,7 +50,13 @@ namespace MyBooks.Service.Database
                     .WithMany(p => p.Citats)
                     .HasForeignKey(d => d.IdKnjiga)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__Citat__IdKnjiga__32E0915F");
+                    .HasConstraintName("FK__Citat__IdKnjiga__33D4B598");
+
+                entity.HasOne(d => d.Korisnik)
+                    .WithMany(p => p.Citats)
+                    .HasForeignKey(d => d.KorisnikId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK__Citat__KorisnikI__32E0915F");
             });
 
             modelBuilder.Entity<Knjiga>(entity =>
@@ -90,20 +96,20 @@ namespace MyBooks.Service.Database
                     .WithMany(p => p.KnjigaZanrs)
                     .HasForeignKey(d => d.IdKnjiga)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__KnjigaZan__IdKnj__35BCFE0A");
+                    .HasConstraintName("FK__KnjigaZan__IdKnj__36B12243");
 
                 entity.HasOne(d => d.IdZanrNavigation)
                     .WithMany(p => p.KnjigaZanrs)
                     .HasForeignKey(d => d.IdZanr)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__KnjigaZan__IdZan__36B12243");
+                    .HasConstraintName("FK__KnjigaZan__IdZan__37A5467C");
             });
 
             modelBuilder.Entity<Korisnik>(entity =>
             {
                 entity.ToTable("Korisnik");
 
-                entity.HasIndex(e => e.Email, "UQ__Korisnik__A9D1053444DE9546")
+                entity.HasIndex(e => e.Email, "UQ__Korisnik__A9D10534CE4A337D")
                     .IsUnique();
 
                 entity.Property(e => e.DatumRegistracije)
@@ -134,13 +140,13 @@ namespace MyBooks.Service.Database
                     .WithMany(p => p.KorisnikZnackas)
                     .HasForeignKey(d => d.KorisnikId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__KorisnikZ__Koris__403A8C7D");
+                    .HasConstraintName("FK__KorisnikZ__Koris__412EB0B6");
 
                 entity.HasOne(d => d.Znacka)
                     .WithMany(p => p.KorisnikZnackas)
                     .HasForeignKey(d => d.ZnackaId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__KorisnikZ__Znack__412EB0B6");
+                    .HasConstraintName("FK__KorisnikZ__Znack__4222D4EF");
             });
 
             modelBuilder.Entity<WishKnjiga>(entity =>
@@ -161,7 +167,7 @@ namespace MyBooks.Service.Database
                     .WithMany(p => p.WishKnjigas)
                     .HasForeignKey(d => d.KorisnikId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK__WishKnjig__Koris__3A81B327");
+                    .HasConstraintName("FK__WishKnjig__Koris__3B75D760");
             });
 
             modelBuilder.Entity<Zanr>(entity =>
@@ -180,6 +186,8 @@ namespace MyBooks.Service.Database
                 entity.Property(e => e.Naziv).HasMaxLength(100);
 
                 entity.Property(e => e.Opis).HasMaxLength(500);
+
+                entity.Property(e => e.Tip).HasMaxLength(30);
             });
 
             OnModelCreatingPartial(modelBuilder);

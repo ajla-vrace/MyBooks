@@ -7,6 +7,7 @@ namespace MyBooks.Service.Database
     {
         public Korisnik()
         {
+            Citats = new HashSet<Citat>();
             Knjigas = new HashSet<Knjiga>();
             KorisnikZnackas = new HashSet<KorisnikZnacka>();
             WishKnjigas = new HashSet<WishKnjiga>();
@@ -23,6 +24,7 @@ namespace MyBooks.Service.Database
         public int? OmiljeniZanrId { get; set; }
 
         public virtual Zanr? OmiljeniZanr { get; set; }
+        public virtual ICollection<Citat> Citats { get; set; }
         public virtual ICollection<Knjiga> Knjigas { get; set; }
         public virtual ICollection<KorisnikZnacka> KorisnikZnackas { get; set; }
         public virtual ICollection<WishKnjiga> WishKnjigas { get; set; }

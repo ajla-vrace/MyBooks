@@ -63,52 +63,8 @@ namespace MyBooks.Service
         }
 
 
-        /* public override async Task<Model.Knjiga> Insert(KnjigaInsertRequest insert)
-         {
-             // Kreiraj novi entitet na osnovu request-a
-             var entity = _mapper.Map<Database.Knjiga>(insert);
+        
 
-             // Postavi trenutni datum
-             entity.DatumKreiranja = DateTime.Now;
-             entity.DatumPocetka = DateTime.Now;
-             entity.DatumZavrsetka = DateTime.Now;
-
-             // Dodaj u bazu podataka
-             _context.Knjigas.Add(entity);
-             await _context.SaveChangesAsync();
-
-             // Vrati mapirani model
-             return _mapper.Map<Model.Knjiga>(entity);
-         }*/
-        /* public override async Task<Model.Knjiga> Insert(KnjigaInsertRequest insert)
-         {
-             var entity = _mapper.Map<Database.Knjiga>(insert);
-
-             entity.DatumKreiranja = DateTime.Now;
-             entity.DatumPocetka = DateTime.Now;
-             entity.DatumZavrsetka = DateTime.Now;
-
-             _context.Knjigas.Add(entity);
-             await _context.SaveChangesAsync();
-
-             // 🔥 DODANO: VEZIVANJE ŽANROVA
-             if (insert.ZanroviIds != null && insert.ZanroviIds.Count > 0)
-             {
-                 foreach (var zanrId in insert.ZanroviIds)
-                 {
-                     _context.KnjigaZanrs.Add(new Database.KnjigaZanr
-                     {
-                         IdKnjiga = entity.Id,
-                         IdZanr = zanrId
-                     });
-                 }
-
-                 await _context.SaveChangesAsync();
-             }
-
-             return _mapper.Map<Model.Knjiga>(entity);
-         }*/
-       
         public override async Task<Model.Knjiga> Insert(KnjigaInsertRequest insert)
         {
             var entity = _mapper.Map<Database.Knjiga>(insert);
@@ -123,7 +79,9 @@ namespace MyBooks.Service
             entity.DatumZavrsetka = DateTime.Now;
 
             _context.Knjigas.Add(entity);
+
             await _context.SaveChangesAsync();
+
 
             if (insert.ZanroviIds != null && insert.ZanroviIds.Count > 0)
             {
@@ -137,15 +95,20 @@ namespace MyBooks.Service
                 }
 
                 await _context.SaveChangesAsync();
-
-                await _korisnikZnackaService
-    .ProvjeriZnacke(entity.KorisnikId);
             }
+
+
+            // PROVJERA ZNAČKI IDE OVAKO
+            await _korisnikZnackaService
+                .ProvjeriZnacke(entity.KorisnikId);
+
+
 
             var knjiga = await _context.Knjigas
                 .Include(k => k.KnjigaZanrs)
                 .ThenInclude(kz => kz.IdZanrNavigation)
                 .FirstAsync(k => k.Id == entity.Id);
+
 
             return _mapper.Map<Model.Knjiga>(knjiga);
         }

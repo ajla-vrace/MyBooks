@@ -15,9 +15,15 @@ namespace MyBooks.Service
 {
     public class CitatService : BaseCRUDService<Model.Citat, Database.Citat, CitatSearchObject, CitatInsertRequest, CitatUpdateRequest>, ICitatService
     {
-        public CitatService(MyBooksContext context, IMapper mapper) : base(context, mapper)
-        {
+        private readonly IKorisnikZnackaService _korisnikZnackaService;
 
+        public CitatService(
+            MyBooksContext context,
+            IMapper mapper,
+            IKorisnikZnackaService korisnikZnackaService)
+            : base(context, mapper)
+        {
+            _korisnikZnackaService = korisnikZnackaService;
         }
 
         public override IQueryable<Database.Citat> AddFilter(IQueryable<Database.Citat> query, CitatSearchObject? search = null)
@@ -43,17 +49,31 @@ namespace MyBooks.Service
 
         public override async Task<Model.Citat> Insert(CitatInsertRequest insert)
         {
-            // Kreiraj novi entitet na osnovu request-a
+            // Kreiraj novi entitet
             var entity = _mapper.Map<Database.Citat>(insert);
 
-            // Postavi trenutni datum
 
-
-            // Dodaj u bazu podataka
+            // Dodaj citat
             _context.Citats.Add(entity);
+
             await _context.SaveChangesAsync();
 
-            // Vrati mapirani model
+
+
+            // Dohvati korisnika preko knjige kojoj pripada citat
+            var korisnikId = await _context.Knjigas
+                .Where(x => x.Id == entity.IdKnjiga)
+                .Select(x => x.KorisnikId)
+                .FirstAsync();
+
+
+
+            // Provjeri značke nakon dodavanja citata
+            await _korisnikZnackaService
+                .ProvjeriZnacke(korisnikId);
+
+
+
             return _mapper.Map<Model.Citat>(entity);
         }
 

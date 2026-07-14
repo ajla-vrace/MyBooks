@@ -3,14 +3,19 @@ import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/znacka.dart';
 import 'dart:io';
 import 'dart:convert';
+
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
 import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/zanr_provider.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:mybooks_mobile/data/moods.dart';
+
 import 'package:mybooks_mobile/providers/znacke_provider.dart';
+
 import 'package:confetti/confetti.dart';
+import 'package:collection/collection.dart';
 
 class AddKnjigaScreen extends StatefulWidget {
   const AddKnjigaScreen({super.key});
@@ -21,23 +26,35 @@ class AddKnjigaScreen extends StatefulWidget {
 
 class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   final _formKey = GlobalKey<FormState>();
+
   File? selectedImage;
+
   String? base64Image;
+
   String? selectedMood;
 
   final naslovController = TextEditingController();
+
   final autorController = TextEditingController();
+
   final opisController = TextEditingController();
+
   final recenzijaController = TextEditingController();
 
   int ocjena = 0;
+
   bool isLoading = false;
+
   bool isFavorite = false;
 
   final ScrollController _scrollController = ScrollController();
+
   List<Zanr> zanrovi = [];
+
   List<int> selectedZanrovi = [];
+
   List<Znacka> sveZnacke = [];
+
   late ConfettiController confettiController;
 
   @override
@@ -45,6 +62,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
     super.initState();
 
     loadZanrovi();
+
     loadZnacke();
 
     confettiController = ConfettiController(
@@ -60,8 +78,6 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
       sveZnacke = result.result;
 
-      print("UCITANE ZNACKE: ${sveZnacke.length}");
-
       if (mounted) {
         setState(() {});
       }
@@ -73,8 +89,14 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   Future<void> loadZanrovi() async {
     try {
       var provider = ZanrProvider();
+
       var result = await provider.get();
-      setState(() => zanrovi = result.result);
+
+      if (mounted) {
+        setState(() {
+          zanrovi = result.result;
+        });
+      }
     } catch (e) {
       print(e);
     }
@@ -85,9 +107,14 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
     confettiController.dispose();
 
     naslovController.dispose();
+
     autorController.dispose();
+
     opisController.dispose();
+
     recenzijaController.dispose();
+
+    _scrollController.dispose();
 
     super.dispose();
   }
@@ -104,6 +131,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
       setState(() {
         selectedImage = file;
+
         base64Image = base64Encode(bytes);
       });
     }
@@ -111,26 +139,28 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
   Future<void> save() async {
     final valid = _formKey.currentState!.validate();
+
     if (!valid) return;
+
     if (ocjena == 0) return;
+
     if (selectedZanrovi.isEmpty) return;
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+    });
 
     try {
-      // Broj znački prije dodavanja knjige
-      var znackePrije = await KorisnikZnackaProvider().get(
-        filter: {
-          "idKorisnik": Authorization.korisnik!.id,
-        },
-      );
+      // ZNAČKE PRIJE
 
-      int brojZnackiPrije = znackePrije.result.length;
+      var znackePrije = await KorisnikZnackaProvider()
+          .get(filter: {"idKorisnik": Authorization.korisnik!.id});
 
-      // Dodavanje knjige
-      var provider = KnjigaProvider();
+      var stareZnackeIds = znackePrije.result.map((x) => x.znackaId).toSet();
 
-      await provider.insert({
+      // DODAVANJE KNJIGE
+
+      await KnjigaProvider().insert({
         "naslov": naslovController.text,
         "autor": autorController.text,
         "opis": opisController.text,
@@ -141,139 +171,74 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         "zanroviIds": selectedZanrovi,
         "isFavorite": isFavorite,
         "mood": selectedMood,
-        "korisnikId": Authorization.korisnik!.id,
+        "korisnikId": Authorization.korisnik!.id
       });
 
-      // Sačekaj da backend upiše značku
-      await Future.delayed(
-        const Duration(milliseconds: 500),
-      );
+      // sačekaj dok backend provjeri značke
 
-      // Broj znački poslije dodavanja knjige
-      var znackePoslije = await KorisnikZnackaProvider().get(
-        filter: {
-          "idKorisnik": Authorization.korisnik!.id,
-        },
-      );
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // Ako je osvojena nova značka
-      if (znackePoslije.result.length > brojZnackiPrije) {
-        var nova = znackePoslije.result.last;
+      // ZNAČKE POSLIJE
 
-        var badge = sveZnacke.firstWhere(
-          (x) => x.id == nova.znackaId,
-        );
+      var znackePoslije = await KorisnikZnackaProvider()
+          .get(filter: {"idKorisnik": Authorization.korisnik!.id});
 
-        showAchievementDialog(badge);
+      var noveZnackeIds = znackePoslije.result.map((x) => x.znackaId).toSet();
+
+      // razlika = nova osvojena značka
+
+      var novaZnackaId = noveZnackeIds.difference(stareZnackeIds).firstOrNull;
+
+      if (novaZnackaId != null) {
+        var badge = sveZnacke.firstWhereOrNull((x) => x.id == novaZnackaId);
+
+        if (badge != null) {
+          showAchievementDialog(badge);
+        }
       }
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Knjiga uspješno dodana 🎉"),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Knjiga uspješno dodana 🎉"),
+        backgroundColor: Colors.green,
+      ));
 
       _formKey.currentState?.reset();
 
       naslovController.clear();
+
       autorController.clear();
+
       opisController.clear();
+
       recenzijaController.clear();
 
       setState(() {
         ocjena = 0;
+
         selectedZanrovi.clear();
+
         selectedImage = null;
+
         base64Image = null;
+
         isFavorite = false;
+
         selectedMood = null;
       });
 
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _scrollController.animateTo(0,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Greška: $e"),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Greška: $e")));
     }
 
-    setState(() => isLoading = false);
-  }
-
-  Future<void> provjeriDobijenuZnacku() async {
-    try {
-      var provider = KorisnikZnackaProvider();
-
-      var rezultat = await provider.get(
-        filter: {"idKorisnik": Authorization.korisnik!.id},
-      );
-
-      if (rezultat.result.isEmpty) return;
-
-      // uzmemo zadnju osvojenu značku
-      var zadnja = rezultat.result.last;
-
-      var znackeProvider = ZnackaProvider();
-
-      var sve = await znackeProvider.get();
-
-      var znacka = sve.result.firstWhere((x) => x.id == zadnja.znackaId);
-
-      showAchievementDialog(znacka);
-    } catch (e) {
-      print("GRESKA PROVJERA ZNACKE: $e");
-    }
-  }
-
-  Future<void> provjeriNovuZnacku(
-    int prije,
-    int poslije,
-  ) async {
-    print("STARE KNJIGE: $prije");
-    print("NOVE KNJIGE: $poslije");
-
-    if (sveZnacke.isEmpty) {
-      await loadZnacke();
-    }
-
-    print("SVE ZNACKE:");
-    for (var z in sveZnacke) {
-      print("${z.id} - ${z.naziv}");
-    }
-
-    var znackeProvider = KorisnikZnackaProvider();
-
-    var rezultat = await znackeProvider.get(
-      filter: {"idKorisnik": Authorization.korisnik!.id},
-    );
-
-    var otkljucane = rezultat.result.map((x) => x.znackaId).toList();
-
-    print("OTKLJUCANE:");
-    print(otkljucane);
-
-    Znacka? nova;
-
-    if (prije < 1 && poslije >= 1) {
-      print("POKUSAVAM PRVU ZNACKU");
-
-      nova = sveZnacke.firstWhere(
-        (x) => x.id == 1,
-      );
-    }
-
-    if (nova != null) {
-      print("PRONADJENA ZNACKA ${nova.naziv}");
-
-      showAchievementDialog(nova);
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -284,6 +249,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return Stack(
           alignment: Alignment.topCenter,
@@ -296,50 +262,54 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 90,
-                    height: 90,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.amber.withOpacity(0.2),
+                      color: Colors.amber.withOpacity(0.15),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.amber.withOpacity(0.6),
-                          blurRadius: 25,
-                          spreadRadius: 5,
+                          color: Colors.amber.withOpacity(0.5),
+                          blurRadius: 30,
+                          spreadRadius: 8,
                         )
                       ],
                     ),
                     child: Center(
                       child: Text(
-                        znacka.ikonica ?? "🏅",
+                        znacka.ikonica ?? "🏆",
                         style: const TextStyle(
-                          fontSize: 55,
+                          fontSize: 65,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 25),
                   const Text(
                     "Nova značka otključana 🎉",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 21,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 15),
                   Text(
                     znacka.naziv ?? "",
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 18,
-                      color: Color(0xFF1B5E20),
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B5E20),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     znacka.opis ?? "",
                     textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
@@ -359,12 +329,19 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 )
               ],
             ),
-            ConfettiWidget(
-              confettiController: confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 50,
-              gravity: 0.2,
-            )
+
+            // KONFETI
+
+            Positioned(
+              top: -100,
+              child: ConfettiWidget(
+                confettiController: confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 80,
+                gravity: 0.15,
+                emissionFrequency: 0.05,
+              ),
+            ),
           ],
         );
       },
@@ -375,7 +352,9 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
     return InputDecoration(
       labelText: label,
       focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF1B5E20)),
+        borderSide: BorderSide(
+          color: Color(0xFF1B5E20),
+        ),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -399,6 +378,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         if (value == null || value == 0) {
           return "Izaberi ocjenu";
         }
+
         return null;
       },
       builder: (state) {
@@ -415,7 +395,8 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                   onPressed: () {
                     setState(() {
                       ocjena = index + 1;
-                      state.didChange(ocjena); // 👈 bitno za validator
+
+                      state.didChange(ocjena);
                     });
                   },
                 );
@@ -424,8 +405,11 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
             if (state.hasError)
               Text(
                 state.errorText!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              ),
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                ),
+              )
           ],
         );
       },
@@ -439,6 +423,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         if (value == null || value.isEmpty) {
           return "Izaberi barem jedan žanr";
         }
+
         return null;
       },
       builder: (state) {
@@ -454,14 +439,15 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 return FilterChip(
                   label: Text(z.naziv ?? ""),
                   selected: selected,
-                  onSelected: (val) {
+                  onSelected: (value) {
                     setState(() {
-                      if (val) {
+                      if (value) {
                         selectedZanrovi.add(z.id!);
                       } else {
                         selectedZanrovi.remove(z.id);
                       }
-                      state.didChange(selectedZanrovi); // 👈 bitno
+
+                      state.didChange(selectedZanrovi);
                     });
                   },
                 );
@@ -472,9 +458,12 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 padding: const EdgeInsets.only(top: 5),
                 child: Text(
                   state.errorText!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
+              )
           ],
         );
       },
@@ -503,7 +492,9 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                     height: 220,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                      ),
                     ),
                     child: selectedImage != null
                         ? ClipRRect(
@@ -515,14 +506,14 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                           )
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.add_photo_alternate,
                                 size: 50,
                                 color: Colors.grey,
                               ),
                               SizedBox(height: 8),
-                              Text("Odaberi sliku"),
+                              Text("Odaberi sliku")
                             ],
                           ),
                   ),
@@ -563,8 +554,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               ),
               const SizedBox(height: 8),
               buildZanrovi(),
-              const SizedBox(height: 20),
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
               const Text(
                 "Kako si se osjećala?",
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -573,10 +563,8 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: List.generate(moods.length, (index) {
-                  final mood = moods[index];
-
-                  final isSelected = selectedMood == mood["text"];
+                children: moods.map((mood) {
+                  final selected = selectedMood == mood["text"];
 
                   return GestureDetector(
                     onTap: () {
@@ -591,12 +579,12 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected
+                        color: selected
                             ? const Color(0xFF1B5E20).withOpacity(0.15)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected
+                          color: selected
                               ? const Color(0xFF1B5E20)
                               : Colors.grey.shade300,
                         ),
@@ -604,29 +592,33 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(mood["emoji"]!,
-                              style: const TextStyle(fontSize: 18)),
+                          Text(
+                            mood["emoji"]!,
+                            style: const TextStyle(fontSize: 18),
+                          ),
                           const SizedBox(width: 6),
-                          Text(mood["text"]!),
+                          Text(mood["text"]!)
                         ],
                       ),
                     ),
                   );
-                }),
+                }).toList(),
               ),
+              const SizedBox(height: 15),
               Row(
                 children: [
                   const Text("Favorite"),
-                  const SizedBox(width: 10),
                   IconButton(
                     onPressed: () {
-                      setState(() => isFavorite = !isFavorite);
+                      setState(() {
+                        isFavorite = !isFavorite;
+                      });
                     },
                     icon: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
                       color: const Color(0xFF1B5E20),
                     ),
-                  ),
+                  )
                 ],
               ),
               const SizedBox(height: 30),
@@ -635,17 +627,21 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B5E20),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: (isLoading || !isFormValid) ? null : save,
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
                       : const Text("Spasi"),
                 ),
-              ),
+              )
             ],
           ),
         ),
