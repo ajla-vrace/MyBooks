@@ -149,6 +149,14 @@ namespace MyBooks.Service
             result.ProsjecnaOcjena = knjige.Any()
                 ? knjige.Average(x => x.Ocjena ?? 0)
                 : 0;
+            result.HistogramOcjena = Enumerable.Range(1, 5)
+      .Select(o => new OcjenaStatistika
+      {
+          Ocjena = o,
+          Broj = knjige.Count(x => x.Ocjena == o)
+      })
+      .OrderByDescending(x => x.Ocjena)
+      .ToList();
 
             result.KnjigePoMjesecima = knjige
                 .GroupBy(x => x.DatumKreiranja!.Value.Month)

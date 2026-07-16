@@ -9,14 +9,12 @@ namespace MyBooks.Service
 {
     public class KorisnikZnackaService : BaseCRUDService<Model.KorisnikZnacka, Database.KorisnikZnacka, KorisnikZnackaSearchObject, KorisnikZnackaInsertRequest, KorisnikZnackaUpdateRequest>, IKorisnikZnackaService
     {
-        private readonly ICitatService _citatService;
+       
         public KorisnikZnackaService(
       MyBooksContext context,
-      IMapper mapper,
-      ICitatService citatService)
+      IMapper mapper)
       : base(context, mapper)
         {
-            _citatService = citatService;
         }
 
 
@@ -148,13 +146,48 @@ namespace MyBooks.Service
 
 
             // 🔥 STREAK
-            var citatStatistika =
-                await _citatStatistikaService
-                .GetStatistika(korisnikId);
+            // 🔥 STREAK
+            var datumiCitata = await _context.Citats
+                .Where(x => x.IdKnjigaNavigation.KorisnikId == korisnikId)
+                .Where(x => x.DatumKreiranja.HasValue)
+                .Select(x => x.DatumKreiranja.Value.Date)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
 
 
-            var najduziStreak =
-                citatStatistika.NajduziNiz;
+            int najduziStreak = 0;
+            int trenutniStreak = 0;
+
+
+            for (int i = 0; i < datumiCitata.Count; i++)
+            {
+                if (i == 0)
+                {
+                    trenutniStreak = 1;
+                }
+                else
+                {
+                    var razlika =
+                        (datumiCitata[i] - datumiCitata[i - 1]).Days;
+
+
+                    if (razlika == 1)
+                    {
+                        trenutniStreak++;
+                    }
+                    else
+                    {
+                        trenutniStreak = 1;
+                    }
+                }
+
+
+                if (trenutniStreak > najduziStreak)
+                {
+                    najduziStreak = trenutniStreak;
+                }
+            }
 
 
 

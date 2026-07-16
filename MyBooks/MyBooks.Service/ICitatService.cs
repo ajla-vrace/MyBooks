@@ -10,6 +10,6 @@ namespace MyBooks.Service
 {
     public interface ICitatService : ICRUDService<Model.Citat, Model.SearchObject.CitatSearchObject, Model.Requests.CitatInsertRequest, Model.Requests.CitatUpdateRequest>
     {
-        CitatiStatistika GetStatistika(int korisnikId);
+        Task<CitatiStatistika> GetStatistika(int korisnikId);
     }
 }

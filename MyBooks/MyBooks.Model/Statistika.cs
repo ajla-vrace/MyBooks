@@ -10,6 +10,7 @@
     public List<AutorStatistika> TopAutori { get; set; } = new();
     public List<MoodStatistika> MoodStatistika { get; set; }
     public List<ZanrStatistika> ZanrovskiDNK { get; set; } = new();
+    public List<OcjenaStatistika> HistogramOcjena { get; set; } = new();
 }
 
 public class BrojPoMjesecu
@@ -32,4 +33,9 @@ public class AutorStatistika
 {
     public string ImeAutora { get; set; } = "";
     public int BrojKnjiga { get; set; }
+}
+public class OcjenaStatistika
+{
+    public int Ocjena { get; set; }
+    public int Broj { get; set; }
 }

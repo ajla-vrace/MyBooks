@@ -94,7 +94,7 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.Citat>(entity);
         }
-        public CitatiStatistika GetStatistika(int korisnikId)
+        public async Task<CitatiStatistika> GetStatistika(int korisnikId)
         {
             var danas = DateTime.Today;
 
