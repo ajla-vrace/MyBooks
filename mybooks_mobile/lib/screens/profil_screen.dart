@@ -383,6 +383,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return colorForGenre(zanrovi.first.naziv);
   }
 
+  /// Ista "porodica" boja kao `colorForGenre`, ali prigušena za svijetlu
+  /// pozadinu (koristi se u Naprednoj statistici/DNK-u). `colorForGenre`
+  /// je namjerno neon-zasićena za tamnu svemirsku pozadinu sazviježđa, pa
+  /// tu istu paletu na bijeloj kartici djeluje presirovo - ovdje se ista
+  /// boja (isti hue) samo spusti na nižu zasićenost i svjetlinu.
+  Color colorForGenreMuted(String? naziv) {
+    final boja = colorForGenre(naziv);
+    if (boja == Colors.white70) return Colors.grey.shade400;
+    final hsv = HSVColor.fromColor(boja);
+    return hsv
+        .withSaturation((hsv.saturation * 0.55).clamp(0.0, 1.0))
+        .withValue((hsv.value * 0.75).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   Future<void> removeFavorite(Knjiga knjiga) async {
     try {
       var provider = KnjigaProvider();
@@ -854,7 +869,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Jedan red žanrovskog DNK-a: naziv žanra, procenat + broj knjiga i
   /// animirana traka napunjena prema procentu zastupljenosti tog žanra.
   Widget buildDnkRow(TopZanr zanr) {
-    final boja = colorForGenre(zanr.naziv);
+    final boja = colorForGenreMuted(zanr.naziv);
     final postotak = (zanr.postotak ?? 0).clamp(0, 100).toDouble();
 
     return Padding(
@@ -1422,18 +1437,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   SizedBox(height: 2),
                                   Text(
-                                    "Tvoj žanrovski DNK 🧬",
+                                    "Dublji uvid u tvoje čitalačke navike",
                                     style: TextStyle(
                                         fontSize: 12, color: Colors.grey),
                                   ),
                                 ],
                               ),
                               children: [
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                                  child: Text(
+                                    "Žanrovski DNK 🧬",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ),
                                 if (statistika == null ||
                                     statistika!.zanrovskiDNK == null ||
                                     statistika!.zanrovskiDNK!.isEmpty)
                                   const Padding(
-                                    padding: EdgeInsets.all(12),
+                                    padding: EdgeInsets.fromLTRB(14, 4, 14, 12),
                                     child: Text(
                                       "Nema dovoljno podataka za statistiku 🧬",
                                       style: TextStyle(color: Colors.grey),
