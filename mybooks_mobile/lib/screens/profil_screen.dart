@@ -36,12 +36,19 @@ import 'package:mybooks_mobile/screens/login_screen.dart';
 /// tempom (seed po knjizi), tako da cijelo sazviježđe djeluje živo i asinhrono.
 /// `intensity` (0..1, obično = ocjena/5) diže fiksnu bazu sjaja i blur/spread,
 /// tako da bolje ocijenjene knjige "gore" jače, nezavisno od pulsiranja.
+///
+/// `playing` kontroliše da li kontroler uopšte animira - kad je sekcija sa
+/// sazviježđem zatvorena (ExpansionTile collapsed), `playing` treba biti
+/// false da se izbjegne besmisleno trošenje CPU/GPU-a na desetine tickera
+/// koji rade u pozadini i uzrokuju jank (npr. trzajući skrol) na ostatku
+/// ekrana, uključujući sekcije poput Značke.
 class _TwinklingStar extends StatefulWidget {
   final double size;
   final Color color;
   final int seed;
   final bool isSelected;
   final double intensity;
+  final bool playing;
   final VoidCallback onTap;
 
   const _TwinklingStar({
@@ -51,6 +58,7 @@ class _TwinklingStar extends StatefulWidget {
     required this.onTap,
     this.isSelected = false,
     this.intensity = 0.6,
+    this.playing = true,
   });
 
   @override
@@ -73,7 +81,22 @@ class _TwinklingStarState extends State<_TwinklingStar>
     );
     // random početna faza da ne krenu sve istovremeno
     _controller.value = rnd.nextDouble();
-    _controller.repeat(reverse: true);
+    if (widget.playing) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _TwinklingStar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // pokreni/zaustavi animaciju kad se promijeni vidljivost sekcije -
+    // sprječava da desetine zvijezda animiraju u pozadini dok je
+    // ExpansionTile zatvoren
+    if (widget.playing && !oldWidget.playing) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.playing && oldWidget.playing) {
+      _controller.stop();
+    }
   }
 
   @override
@@ -84,57 +107,52 @@ class _TwinklingStarState extends State<_TwinklingStar>
 
   @override
   Widget build(BuildContext context) {
-    // TickerMode force-enabled: ExpansionTile inače gasi tickere dok je
-    // skupljen, ovo garantuje da animacija radi čim je sekcija otvorena.
-    return TickerMode(
-      enabled: true,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final t = Curves.easeInOut.transform(_controller.value); // 0..1
-          final intensity = widget.intensity.clamp(0.0, 1.0);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_controller.value); // 0..1
+        final intensity = widget.intensity.clamp(0.0, 1.0);
 
-          // fiksna baza sjaja raste sa ocjenom (intensity), pulsiranje je
-          // dodatni sloj preko toga - bolje ocijenjene knjige uvijek sijaju
-          // jače, slabije ocijenjene su suptilnije čak i na vrhuncu pulsa
-          final glow = (0.35 + intensity * 0.45) + t * 0.25;
-          final glowSpread = 0.7 + intensity * 0.8;
-          final scale = 0.92 + t * 0.16;
-          final selBoost = widget.isSelected ? 1.6 : 1.0;
+        // fiksna baza sjaja raste sa ocjenom (intensity), pulsiranje je
+        // dodatni sloj preko toga - bolje ocijenjene knjige uvijek sijaju
+        // jače, slabije ocijenjene su suptilnije čak i na vrhuncu pulsa
+        final glow = (0.35 + intensity * 0.45) + t * 0.25;
+        final glowSpread = 0.7 + intensity * 0.8;
+        final scale = 0.92 + t * 0.16;
+        final selBoost = widget.isSelected ? 1.6 : 1.0;
 
-          return GestureDetector(
-            onTap: widget.onTap,
-            child: Transform.scale(
-              scale: scale,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.color.withOpacity(
-                        (0.85 * glow * selBoost).clamp(0.0, 1.0),
-                      ),
-                      blurRadius: widget.size * 2.2 * selBoost * glowSpread,
-                      spreadRadius: widget.size * 0.25 * selBoost * glowSpread,
+        return GestureDetector(
+          onTap: widget.onTap,
+          child: Transform.scale(
+            scale: scale,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withOpacity(
+                      (0.85 * glow * selBoost).clamp(0.0, 1.0),
                     ),
-                    if (widget.isSelected)
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.6),
-                        blurRadius: widget.size * 0.9,
-                        spreadRadius: 1,
-                      ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.star,
-                  size: widget.size,
-                  color: Color.lerp(widget.color, Colors.white, 0.2 * t),
-                ),
+                    blurRadius: widget.size * 2.2 * selBoost * glowSpread,
+                    spreadRadius: widget.size * 0.25 * selBoost * glowSpread,
+                  ),
+                  if (widget.isSelected)
+                    BoxShadow(
+                      color: Colors.white.withOpacity(0.6),
+                      blurRadius: widget.size * 0.9,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: Icon(
+                Icons.star,
+                size: widget.size,
+                color: Color.lerp(widget.color, Colors.white, 0.2 * t),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -174,15 +192,20 @@ class _GenreLinesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _GenreLinesPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _GenreLinesPainter oldDelegate) =>
+      oldDelegate.books != books;
 }
 
 /// Centar galaksije - veći, "mirniji" i jače usijan sjaj od zvijezda, da se
 /// odmah vizuelno izdvoji kao gravitaciono središte oko kojeg sve orbitira.
+///
+/// `playing` (vidi napomenu kod `_TwinklingStar`) kontroliše da li animacija
+/// uopšte radi - kad je sazviježđe skupljeno, core ne animira.
 class _GalaxyCore extends StatefulWidget {
   final double size;
+  final bool playing;
 
-  const _GalaxyCore({required this.size});
+  const _GalaxyCore({required this.size, this.playing = true});
 
   @override
   State<_GalaxyCore> createState() => _GalaxyCoreState();
@@ -200,7 +223,20 @@ class _GalaxyCoreState extends State<_GalaxyCore>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2800),
-    )..repeat(reverse: true);
+    );
+    if (widget.playing) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _GalaxyCore oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.playing && !oldWidget.playing) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.playing && oldWidget.playing) {
+      _controller.stop();
+    }
   }
 
   @override
@@ -211,54 +247,51 @@ class _GalaxyCoreState extends State<_GalaxyCore>
 
   @override
   Widget build(BuildContext context) {
-    return TickerMode(
-      enabled: true,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          final t = Curves.easeInOut.transform(_controller.value); // 0..1
-          final glow = 0.75 + t * 0.35;
-          final scale = 0.97 + t * 0.06;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_controller.value); // 0..1
+        final glow = 0.75 + t * 0.35;
+        final scale = 0.97 + t * 0.06;
 
-          return Transform.scale(
-            scale: scale,
-            child: Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const RadialGradient(
-                  colors: [
-                    Colors.white,
-                    Color(0xFFD1B3FF),
-                    Color(0xFF7C4DFF),
-                  ],
-                  stops: [0.0, 0.55, 1.0],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        Colors.white.withOpacity((0.8 * glow).clamp(0.0, 1.0)),
-                    blurRadius: widget.size * 1.3,
-                    spreadRadius: widget.size * 0.28,
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFFB388FF)
-                        .withOpacity((0.65 * glow).clamp(0.0, 1.0)),
-                    blurRadius: widget.size * 0.8,
-                    spreadRadius: widget.size * 0.1,
-                  ),
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const RadialGradient(
+                colors: [
+                  Colors.white,
+                  Color(0xFFD1B3FF),
+                  Color(0xFF7C4DFF),
                 ],
+                stops: [0.0, 0.55, 1.0],
               ),
-              child: Icon(
-                Icons.menu_book_rounded,
-                color: const Color(0xFF4A148C),
-                size: widget.size * 0.48,
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Colors.white.withOpacity((0.8 * glow).clamp(0.0, 1.0)),
+                  blurRadius: widget.size * 1.3,
+                  spreadRadius: widget.size * 0.28,
+                ),
+                BoxShadow(
+                  color: const Color(0xFFB388FF)
+                      .withOpacity((0.65 * glow).clamp(0.0, 1.0)),
+                  blurRadius: widget.size * 0.8,
+                  spreadRadius: widget.size * 0.1,
+                ),
+              ],
             ),
-          );
-        },
-      ),
+            child: Icon(
+              Icons.menu_book_rounded,
+              color: const Color(0xFF4A148C),
+              size: widget.size * 0.48,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -279,6 +312,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<KorisnikZnacka> znacke = [];
   Statistika? statistika;
   String? selectedStarKey;
+
+  // Da li je sekcija sa sazviježđem trenutno otvorena - animacije zvijezda
+  // i core-a se pale/gase u zavisnosti od ovoga, umjesto da rade
+  // neprestano u pozadini (što je uzrokovalo trzajući skrol drugdje na
+  // ekranu, npr. u sekciji Značke).
+  bool constellationExpanded = false;
 
   bool isLoading = true;
 
@@ -609,6 +648,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         seed: book.id ?? book.naslov.hashCode,
         intensity: intensity,
         isSelected: selectedStarKey == key,
+        playing: constellationExpanded,
         onTap: () {
           setState(() {
             selectedStarKey = selectedStarKey == key ? null : key;
@@ -718,7 +758,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Positioned(
       left: centerX - coreSize / 2,
       top: centerY - coreSize / 2,
-      child: const _GalaxyCore(size: coreSize),
+      child: _GalaxyCore(size: coreSize, playing: constellationExpanded),
     );
   }
 
@@ -1081,7 +1121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? [
                           BoxShadow(
                             color: boja.withOpacity(0.35),
-                            blurRadius: 12,
+                            blurRadius: 6,
                           )
                         ]
                       : [],
@@ -1236,9 +1276,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         child: ListView(
+                          // čuva scroll poziciju liste po PageStorageKey-u i
+                          // sprječava da Flutter pomiješa stanje ExpansionTile
+                          // widgeta prilikom rebuilda (npr. resize prozora)
+                          key: const PageStorageKey('profile_list'),
                           children: [
                             /// ❤️ FAVORITES
                             ExpansionTile(
+                              key: const PageStorageKey('tile_favorites'),
                               leading: const Icon(Icons.favorite,
                                   color: Color(0xFF1B5E20)),
                               title: Column(
@@ -1357,6 +1402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             /// 📌 WISHLIST
                             ExpansionTile(
+                              key: const PageStorageKey('tile_wishlist'),
                               leading: const Icon(Icons.bookmark,
                                   color: Color(0xFF1B5E20)),
                               title: Column(
@@ -1537,6 +1583,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             /// ⭐ SAZVIJEŽĐE PROČITANIH KNJIGA
                             ExpansionTile(
+                              key: const PageStorageKey('tile_constellation'),
                               leading: const Icon(Icons.travel_explore,
                                   color: Color(0xFF1B5E20)),
                               title: Column(
@@ -1555,6 +1602,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ],
                               ),
+                              // animacije zvijezda/core-a se pale samo dok je
+                              // sekcija otvorena - kad se zatvori, prestaju
+                              // odmah da rade u pozadini
+                              onExpansionChanged: (expanded) {
+                                setState(() {
+                                  constellationExpanded = expanded;
+                                  if (!expanded) {
+                                    selectedStarKey = null;
+                                  }
+                                });
+                              },
                               children: [
                                 procitane.isEmpty
                                     ? const Padding(
@@ -1564,97 +1622,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           style: TextStyle(color: Colors.grey),
                                         ),
                                       )
-                                    : Container(
-                                        margin: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 8),
-                                        height: 260,
-                                        width: double.infinity,
-                                        clipBehavior: Clip.antiAlias,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final viewportW =
-                                                constraints.maxWidth;
-                                            final viewportH =
-                                                constraints.maxHeight;
+                                    // RepaintBoundary izolira konstantno
+                                    // animirano sazviježđe od ostatka
+                                    // ListView-a, tako da njegovi repaintovi
+                                    // ne izazivaju dodatni rad (i jank) na
+                                    // ostalim sekcijama, npr. pri skrolu
+                                    : RepaintBoundary(
+                                        child: Container(
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          height: 260,
+                                          width: double.infinity,
+                                          clipBehavior: Clip.antiAlias,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              final viewportW =
+                                                  constraints.maxWidth;
+                                              final viewportH =
+                                                  constraints.maxHeight;
 
-                                            // platno je veće od vidljivog
-                                            // okvira - raste sa brojem knjiga
-                                            // da zvijezde imaju više prostora
-                                            // i manje se guraju na malim
-                                            // ekranima; korisnik zumira/
-                                            // pomjera pogled po njemu
-                                            final canvasW = viewportW +
-                                                procitane.length * 26;
-                                            final canvasH = viewportH +
-                                                procitane.length * 16;
+                                              // platno je veće od vidljivog
+                                              // okvira - raste sa brojem knjiga
+                                              // da zvijezde imaju više prostora
+                                              // i manje se guraju na malim
+                                              // ekranima; korisnik zumira/
+                                              // pomjera pogled po njemu
+                                              final canvasW = viewportW +
+                                                  procitane.length * 26;
+                                              final canvasH = viewportH +
+                                                  procitane.length * 16;
 
-                                            Knjiga? selected;
-                                            for (final b in procitane) {
-                                              if (starKeyFor(b) ==
-                                                  selectedStarKey) {
-                                                selected = b;
-                                                break;
+                                              Knjiga? selected;
+                                              for (final b in procitane) {
+                                                if (starKeyFor(b) ==
+                                                    selectedStarKey) {
+                                                  selected = b;
+                                                  break;
+                                                }
                                               }
-                                            }
 
-                                            // layout se računa jednom po
-                                            // veličini platna (deterministički
-                                            // po id-u knjige) - garantuje da
-                                            // se zvijezde ne preklapaju
-                                            final layout = computeStarLayout(
-                                                procitane, canvasW, canvasH);
+                                              // layout se računa jednom po
+                                              // veličini platna (deterministički
+                                              // po id-u knjige) - garantuje da
+                                              // se zvijezde ne preklapaju
+                                              final layout = computeStarLayout(
+                                                  procitane, canvasW, canvasH);
 
-                                            return InteractiveViewer(
-                                              constrained: false,
-                                              minScale: 1.0,
-                                              maxScale: 3.5,
-                                              boundaryMargin:
-                                                  const EdgeInsets.all(40),
-                                              child: SizedBox(
-                                                width: canvasW,
-                                                height: canvasH,
-                                                child: Stack(
-                                                  children: [
-                                                    buildGalaxyBackground(
-                                                        canvasW, canvasH),
-                                                    CustomPaint(
-                                                      size: Size(
+                                              return InteractiveViewer(
+                                                constrained: false,
+                                                minScale: 1.0,
+                                                maxScale: 3.5,
+                                                boundaryMargin:
+                                                    const EdgeInsets.all(40),
+                                                child: SizedBox(
+                                                  width: canvasW,
+                                                  height: canvasH,
+                                                  child: Stack(
+                                                    children: [
+                                                      buildGalaxyBackground(
                                                           canvasW, canvasH),
-                                                      painter:
-                                                          _GenreLinesPainter(
-                                                        books: procitane,
-                                                        centerOf: (b) =>
-                                                            layout[starKeyFor(
-                                                                b)] ??
-                                                            Offset(canvasW / 2,
-                                                                canvasH / 2),
-                                                        colorForGenre:
-                                                            colorForGenre,
+                                                      CustomPaint(
+                                                        size: Size(
+                                                            canvasW, canvasH),
+                                                        painter:
+                                                            _GenreLinesPainter(
+                                                          books: procitane,
+                                                          centerOf: (b) =>
+                                                              layout[starKeyFor(
+                                                                  b)] ??
+                                                              Offset(canvasW / 2,
+                                                                  canvasH / 2),
+                                                          colorForGenre:
+                                                              colorForGenre,
+                                                        ),
                                                       ),
-                                                    ),
-                                                    buildGalaxyCore(
-                                                        canvasW, canvasH),
-                                                    ...procitane.map((book) =>
-                                                        buildStar(
-                                                            book,
+                                                      buildGalaxyCore(
+                                                          canvasW, canvasH),
+                                                      ...procitane.map((book) =>
+                                                          buildStar(
+                                                              book,
+                                                              layout[starKeyFor(
+                                                                  book)]!)),
+                                                      if (selected != null)
+                                                        buildInfoCard(
+                                                            selected,
                                                             layout[starKeyFor(
-                                                                book)]!)),
-                                                    if (selected != null)
-                                                      buildInfoCard(
-                                                          selected,
-                                                          layout[starKeyFor(
-                                                              selected)]!,
-                                                          canvasW,
-                                                          canvasH),
-                                                  ],
+                                                                selected)]!,
+                                                            canvasW,
+                                                            canvasH),
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                            );
-                                          },
+                                              );
+                                            },
+                                          ),
                                         ),
                                       ),
                                 if (procitane.isNotEmpty)
@@ -1674,6 +1739,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             /// 🧬 NAPREDNA STATISTIKA
                             ExpansionTile(
+                              key: const PageStorageKey('tile_stats'),
                               leading: const Icon(Icons.insights,
                                   color: Color(0xFF1B5E20)),
                               title: Column(
@@ -1732,6 +1798,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             /// 🏅 ZNAČKE
                             ExpansionTile(
+                              key: const PageStorageKey('tile_badges'),
                               leading: const Icon(
                                 Icons.workspace_premium,
                                 color: Color(0xFF1B5E20),
@@ -1756,7 +1823,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               children: [
-                                buildZnackeByNivo(),
+                                // RepaintBoundary izolira ovaj (skup, jer
+                                // sadrži dosta blurane BoxShadow grafike po
+                                // znački) podstablo od ostatka ListView-a, da
+                                // skrolanje tokom/nakon otvaranja sekcije ne
+                                // izazove trzajuće iscrtavanje cijele liste
+                                RepaintBoundary(
+                                  child: buildZnackeByNivo(),
+                                ),
                               ],
                             ),
 
