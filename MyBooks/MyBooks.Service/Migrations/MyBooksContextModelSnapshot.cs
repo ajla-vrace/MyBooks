@@ -46,6 +46,9 @@ namespace MyBooks.Service.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValueSql("((0))");
 
+                    b.Property<int>("KorisnikId")
+                        .HasColumnType("int");
+
                     b.Property<string>("TekstCitata")
                         .HasColumnType("nvarchar(max)");
 
@@ -53,7 +56,9 @@ namespace MyBooks.Service.Migrations
 
                     b.HasIndex("IdKnjiga");
 
-                    b.ToTable("Citat");
+                    b.HasIndex("KorisnikId");
+
+                    b.ToTable("Citat", (string)null);
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.Knjiga", b =>
@@ -69,6 +74,9 @@ namespace MyBooks.Service.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("Biljeske")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("DatumKreiranja")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
@@ -80,11 +88,17 @@ namespace MyBooks.Service.Migrations
                     b.Property<DateTime?>("DatumZavrsetka")
                         .HasColumnType("date");
 
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("bit");
+                    b.Property<bool?>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValueSql("((0))");
+
+                    b.Property<int>("KorisnikId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Mood")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Naslov")
                         .IsRequired()
@@ -109,7 +123,9 @@ namespace MyBooks.Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Knjiga");
+                    b.HasIndex("KorisnikId");
+
+                    b.ToTable("Knjiga", (string)null);
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.KnjigaZanr", b =>
@@ -132,7 +148,87 @@ namespace MyBooks.Service.Migrations
 
                     b.HasIndex("IdZanr");
 
-                    b.ToTable("KnjigaZanr");
+                    b.ToTable("KnjigaZanr", (string)null);
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.Korisnik", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<DateTime?>("DatumRegistracije")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("GodisnjiCilj")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("((20))");
+
+                    b.Property<string>("Ime")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("LozinkaHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte[]>("LozinkaSalt")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int?>("OmiljeniZanrId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("ProfilnaSlika")
+                        .HasColumnType("varbinary(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OmiljeniZanrId");
+
+                    b.HasIndex(new[] { "Email" }, "UQ__Korisnik__A9D10534CE4A337D")
+                        .IsUnique();
+
+                    b.ToTable("Korisnik", (string)null);
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.KorisnikZnacka", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<DateTime?>("DatumOtkljucavanja")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("KorisnikId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ZnackaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KorisnikId");
+
+                    b.HasIndex("ZnackaId");
+
+                    b.ToTable("KorisnikZnacka", (string)null);
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.WishKnjiga", b =>
@@ -152,6 +248,9 @@ namespace MyBooks.Service.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int>("KorisnikId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Napomena")
                         .HasColumnType("nvarchar(max)");
 
@@ -169,7 +268,9 @@ namespace MyBooks.Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WishKnjiga");
+                    b.HasIndex("KorisnikId");
+
+                    b.ToTable("WishKnjiga", (string)null);
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.Zanr", b =>
@@ -187,7 +288,44 @@ namespace MyBooks.Service.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Zanr");
+                    b.ToTable("Zanr", (string)null);
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.Znacka", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("Ikonica")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Naziv")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("Nivo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Opis")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Prag")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tip")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Znacka", (string)null);
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.Citat", b =>
@@ -196,9 +334,28 @@ namespace MyBooks.Service.Migrations
                         .WithMany("Citats")
                         .HasForeignKey("IdKnjiga")
                         .IsRequired()
-                        .HasConstraintName("FK__Citat__IdKnjiga__29572725");
+                        .HasConstraintName("FK__Citat__IdKnjiga__33D4B598");
+
+                    b.HasOne("MyBooks.Service.Database.Korisnik", "Korisnik")
+                        .WithMany("Citats")
+                        .HasForeignKey("KorisnikId")
+                        .IsRequired()
+                        .HasConstraintName("FK__Citat__KorisnikI__32E0915F");
 
                     b.Navigation("IdKnjigaNavigation");
+
+                    b.Navigation("Korisnik");
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.Knjiga", b =>
+                {
+                    b.HasOne("MyBooks.Service.Database.Korisnik", "Korisnik")
+                        .WithMany("Knjigas")
+                        .HasForeignKey("KorisnikId")
+                        .IsRequired()
+                        .HasConstraintName("FK__Knjiga__Korisnik__2E1BDC42");
+
+                    b.Navigation("Korisnik");
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.KnjigaZanr", b =>
@@ -207,17 +364,57 @@ namespace MyBooks.Service.Migrations
                         .WithMany("KnjigaZanrs")
                         .HasForeignKey("IdKnjiga")
                         .IsRequired()
-                        .HasConstraintName("FK__KnjigaZan__IdKnj__2E1BDC42");
+                        .HasConstraintName("FK__KnjigaZan__IdKnj__36B12243");
 
                     b.HasOne("MyBooks.Service.Database.Zanr", "IdZanrNavigation")
                         .WithMany("KnjigaZanrs")
                         .HasForeignKey("IdZanr")
                         .IsRequired()
-                        .HasConstraintName("FK__KnjigaZan__IdZan__2F10007B");
+                        .HasConstraintName("FK__KnjigaZan__IdZan__37A5467C");
 
                     b.Navigation("IdKnjigaNavigation");
 
                     b.Navigation("IdZanrNavigation");
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.Korisnik", b =>
+                {
+                    b.HasOne("MyBooks.Service.Database.Zanr", "OmiljeniZanr")
+                        .WithMany("Korisniks")
+                        .HasForeignKey("OmiljeniZanrId")
+                        .HasConstraintName("FK__Korisnik__Omilje__29572725");
+
+                    b.Navigation("OmiljeniZanr");
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.KorisnikZnacka", b =>
+                {
+                    b.HasOne("MyBooks.Service.Database.Korisnik", "Korisnik")
+                        .WithMany("KorisnikZnackas")
+                        .HasForeignKey("KorisnikId")
+                        .IsRequired()
+                        .HasConstraintName("FK__KorisnikZ__Koris__412EB0B6");
+
+                    b.HasOne("MyBooks.Service.Database.Znacka", "Znacka")
+                        .WithMany("KorisnikZnackas")
+                        .HasForeignKey("ZnackaId")
+                        .IsRequired()
+                        .HasConstraintName("FK__KorisnikZ__Znack__4222D4EF");
+
+                    b.Navigation("Korisnik");
+
+                    b.Navigation("Znacka");
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.WishKnjiga", b =>
+                {
+                    b.HasOne("MyBooks.Service.Database.Korisnik", "Korisnik")
+                        .WithMany("WishKnjigas")
+                        .HasForeignKey("KorisnikId")
+                        .IsRequired()
+                        .HasConstraintName("FK__WishKnjig__Koris__3B75D760");
+
+                    b.Navigation("Korisnik");
                 });
 
             modelBuilder.Entity("MyBooks.Service.Database.Knjiga", b =>
@@ -227,9 +424,27 @@ namespace MyBooks.Service.Migrations
                     b.Navigation("KnjigaZanrs");
                 });
 
+            modelBuilder.Entity("MyBooks.Service.Database.Korisnik", b =>
+                {
+                    b.Navigation("Citats");
+
+                    b.Navigation("Knjigas");
+
+                    b.Navigation("KorisnikZnackas");
+
+                    b.Navigation("WishKnjigas");
+                });
+
             modelBuilder.Entity("MyBooks.Service.Database.Zanr", b =>
                 {
                     b.Navigation("KnjigaZanrs");
+
+                    b.Navigation("Korisniks");
+                });
+
+            modelBuilder.Entity("MyBooks.Service.Database.Znacka", b =>
+                {
+                    b.Navigation("KorisnikZnackas");
                 });
 #pragma warning restore 612, 618
         }

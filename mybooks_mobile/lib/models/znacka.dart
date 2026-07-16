@@ -10,8 +10,8 @@ class Znacka {
   String? ikonica;
   String tip;
   int prag;
-
-  Znacka(this.id, this.naziv, this.opis, this.ikonica, this.tip, this.prag);
+  int? nivo;
+  Znacka(this.id, this.naziv, this.opis, this.ikonica, this.tip, this.prag,this.nivo);
 
   factory Znacka.fromJson(Map<String, dynamic> json) => _$ZnackaFromJson(json);
 

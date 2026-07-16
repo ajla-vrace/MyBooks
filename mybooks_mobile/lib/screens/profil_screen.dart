@@ -939,6 +939,255 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Boja po nivou značke - fiksna "tier" skala, ista za sve porodice
+  /// znački (knjige, citati...) jer je vezana za `nivo`, a ne za `Tip`.
+  /// NAPOMENA: pretpostavljam da `Znacka` ima polje `nivo` (int?, 1-5).
+  /// Ako se polje zove drugačije, samo prilagodi `znacka.nivo` pozive niže.
+  Color colorForNivo(int? nivo) {
+    switch (nivo) {
+      case 1:
+        return const Color(0xFFCD7F32); // bronza
+      case 2:
+        return const Color(0xFF9E9E9E); // srebro
+      case 3:
+        return const Color(0xFFFFC107); // zlato
+      case 4:
+        return const Color(0xFF29B6F6); // platina
+      case 5:
+        return const Color(0xFF66BB6A); // smaragd
+      case 6:
+        return const Color(0xFFAB47BC); // dijamant/ljubičasta
+      default:
+        return const Color(0xFF1B5E20); // fallback - značke bez nivoa
+    }
+  }
+
+  /// Naziv nivoa za naslov sekcije u prikazu značke po nivoima.
+  String nivoLabel(int? nivo) {
+    switch (nivo) {
+      case 1:
+        return "Nivo 1";
+      case 2:
+        return "Nivo 2";
+      case 3:
+        return "Nivo 3";
+      case 4:
+        return "Nivo 4";
+      case 5:
+        return "Nivo 5";
+      case 6:
+        return "Nivo 6";
+      default:
+        return "Ostalo";
+    }
+  }
+
+  /// Jedna značka: obojena prema nivou ako je otključana, siva ako nije.
+  /// Klik otvara isti popup sa opisom i datumom otključavanja kao i prije.
+  Widget buildZnackaBadge(Znacka znacka) {
+    final bool otkljucana = otkljucaneZnacke.contains(znacka.id);
+    final boja = colorForNivo(znacka.nivo);
+
+    DateTime? datum;
+    if (otkljucana) {
+      final korisnikZnacka = znacke.firstWhere(
+        (x) => x.znackaId == znacka.id,
+      );
+      datum = korisnikZnacka.datumOtkljucavanja;
+    }
+
+    return Builder(
+      builder: (context) {
+        return GestureDetector(
+          onTap: () {
+            final RenderBox box = context.findRenderObject() as RenderBox;
+            final Offset position = box.localToGlobal(Offset.zero);
+
+            showMenu(
+              context: context,
+              position: RelativeRect.fromLTRB(
+                position.dx - 40,
+                position.dy - 170,
+                position.dx + 120,
+                position.dy,
+              ),
+              items: [
+                PopupMenuItem(
+                  enabled: false,
+                  child: SizedBox(
+                    width: 220,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              znacka.ikonica ?? "🏅",
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                znacka.naziv ?? "",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          znacka.opis ?? "Nema opisa",
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        if (otkljucana && datum != null) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            "🏆 Otključano\n"
+                            "${datum.day}."
+                            "${datum.month}."
+                            "${datum.year}",
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                )
+              ],
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 75,
+                height: 75,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: otkljucana
+                      ? boja.withOpacity(0.15)
+                      : Colors.grey.withOpacity(0.15),
+                  border: Border.all(
+                    color: otkljucana ? boja : Colors.grey.shade400,
+                    width: 1.5,
+                  ),
+                  boxShadow: otkljucana
+                      ? [
+                          BoxShadow(
+                            color: boja.withOpacity(0.35),
+                            blurRadius: 12,
+                          )
+                        ]
+                      : [],
+                ),
+                child: Center(
+                  child: Opacity(
+                    opacity: otkljucana ? 1 : 0.25,
+                    child: Text(
+                      znacka.ikonica ?? "🏅",
+                      style: const TextStyle(fontSize: 42),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 90,
+                child: Text(
+                  znacka.naziv ?? "",
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: otkljucana ? Colors.black : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Sve značke grupisane po nivou (1-5), svaki nivo sa svojim naslovom
+  /// i bojom - otključane značke nose boju svog nivoa, zaključane su sive.
+  Widget buildZnackeByNivo() {
+    if (sveZnacke.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          "Nema dostupnih znački 🏅",
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    final Map<int, List<Znacka>> byNivo = {};
+    for (final z in sveZnacke) {
+      final n = z.nivo ?? 0;
+      byNivo.putIfAbsent(n, () => []).add(z);
+    }
+
+    final nivoi = byNivo.keys.toList()..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: nivoi.map((nivo) {
+        final grupa = byNivo[nivo]!;
+        final boja = colorForNivo(nivo == 0 ? null : nivo);
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: boja,
+                      boxShadow: [
+                        BoxShadow(color: boja.withOpacity(0.6), blurRadius: 5),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    nivoLabel(nivo == 0 ? null : nivo),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 18,
+                runSpacing: 20,
+                children: grupa.map((znacka) => buildZnackaBadge(znacka)).toList(),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1507,217 +1756,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               children: [
-                                if (sveZnacke.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: Text(
-                                      "Nema dostupnih znački 🏅",
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Wrap(
-                                      spacing: 18,
-                                      runSpacing: 20,
-                                      children: sveZnacke.map((znacka) {
-                                        final bool otkljucana = otkljucaneZnacke
-                                            .contains(znacka.id);
-
-                                        DateTime? datum;
-
-                                        if (otkljucana) {
-                                          final korisnikZnacka =
-                                              znacke.firstWhere(
-                                            (x) => x.znackaId == znacka.id,
-                                          );
-
-                                          datum =
-                                              korisnikZnacka.datumOtkljucavanja;
-                                        }
-
-                                        return Builder(
-                                          builder: (context) {
-                                            return GestureDetector(
-                                              onTap: () {
-                                                final RenderBox box =
-                                                    context.findRenderObject()
-                                                        as RenderBox;
-
-                                                final Offset position =
-                                                    box.localToGlobal(
-                                                  Offset.zero,
-                                                );
-
-                                                showMenu(
-                                                  context: context,
-                                                  position:
-                                                      RelativeRect.fromLTRB(
-                                                    position.dx - 40,
-                                                    position.dy - 170,
-                                                    position.dx + 120,
-                                                    position.dy,
-                                                  ),
-                                                  items: [
-                                                    PopupMenuItem(
-                                                      enabled: false,
-                                                      child: SizedBox(
-                                                        width: 220,
-                                                        child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Row(
-                                                              children: [
-                                                                Text(
-                                                                  znacka.ikonica ??
-                                                                      "🏅",
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    fontSize:
-                                                                        28,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  width: 8,
-                                                                ),
-                                                                Expanded(
-                                                                  child: Text(
-                                                                    znacka.naziv ??
-                                                                        "",
-                                                                    style:
-                                                                        const TextStyle(
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                            const SizedBox(
-                                                              height: 10,
-                                                            ),
-                                                            Text(
-                                                              znacka.opis ??
-                                                                  "Nema opisa",
-                                                              style:
-                                                                  const TextStyle(
-                                                                fontSize: 13,
-                                                              ),
-                                                            ),
-                                                            if (otkljucana &&
-                                                                datum !=
-                                                                    null) ...[
-                                                              const SizedBox(
-                                                                height: 10,
-                                                              ),
-                                                              Text(
-                                                                "🏆 Otključano\n"
-                                                                "${datum.day}."
-                                                                "${datum.month}."
-                                                                "${datum.year}",
-                                                                style:
-                                                                    const TextStyle(
-                                                                  color: Colors
-                                                                      .green,
-                                                                  fontSize: 12,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                              ),
-                                                            ]
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    )
-                                                  ],
-                                                );
-                                              },
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    width: 75,
-                                                    height: 75,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: otkljucana
-                                                          ? Colors.amber
-                                                              .withOpacity(0.15)
-                                                          : Colors.grey
-                                                              .withOpacity(
-                                                                  0.15),
-                                                      border: Border.all(
-                                                        color: otkljucana
-                                                            ? Colors.amber
-                                                            : Colors
-                                                                .grey.shade400,
-                                                        width: 1.5,
-                                                      ),
-                                                      boxShadow: otkljucana
-                                                          ? [
-                                                              BoxShadow(
-                                                                color: Colors
-                                                                    .amber
-                                                                    .withOpacity(
-                                                                        0.25),
-                                                                blurRadius: 12,
-                                                              )
-                                                            ]
-                                                          : [],
-                                                    ),
-                                                    child: Center(
-                                                      child: Opacity(
-                                                        opacity: otkljucana
-                                                            ? 1
-                                                            : 0.25,
-                                                        child: Text(
-                                                          znacka.ikonica ??
-                                                              "🏅",
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 42,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(
-                                                    height: 8,
-                                                  ),
-                                                  SizedBox(
-                                                    width: 90,
-                                                    child: Text(
-                                                      znacka.naziv ?? "",
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      maxLines: 2,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: otkljucana
-                                                            ? Colors.black
-                                                            : Colors.grey,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
+                                buildZnackeByNivo(),
                               ],
                             ),
 

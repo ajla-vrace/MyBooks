@@ -9,9 +9,14 @@ namespace MyBooks.Service
 {
     public class KorisnikZnackaService : BaseCRUDService<Model.KorisnikZnacka, Database.KorisnikZnacka, KorisnikZnackaSearchObject, KorisnikZnackaInsertRequest, KorisnikZnackaUpdateRequest>, IKorisnikZnackaService
     {
-        public KorisnikZnackaService(MyBooksContext context, IMapper mapper) : base(context, mapper)
+        private readonly ICitatService _citatService;
+        public KorisnikZnackaService(
+      MyBooksContext context,
+      IMapper mapper,
+      ICitatService citatService)
+      : base(context, mapper)
         {
-
+            _citatService = citatService;
         }
 
 
@@ -99,26 +104,22 @@ namespace MyBooks.Service
 
         public async Task ProvjeriZnacke(int korisnikId)
         {
-
-            // BROJ KNJIGA
-            var brojKnjiga =
-                await _context.Knjigas
+            // 📚 BROJ KNJIGA
+            var brojKnjiga = await _context.Knjigas
                 .CountAsync(x =>
                     x.KorisnikId == korisnikId);
 
 
 
-            // BROJ CITATA
-            var brojCitata =
-                await _context.Citats
+            // 💬 BROJ CITATA
+            var brojCitata = await _context.Citats
                 .CountAsync(x =>
                     x.IdKnjigaNavigation.KorisnikId == korisnikId);
 
 
 
-            // BROJ RAZLIČITIH ŽANROVA
-            var brojZanrova =
-                await _context.KnjigaZanrs
+            // 🧭 BROJ RAZLIČITIH ŽANROVA
+            var brojZanrova = await _context.KnjigaZanrs
                 .Where(x =>
                     x.IdKnjigaNavigation.KorisnikId == korisnikId)
                 .Select(x => x.IdZanr)
@@ -127,57 +128,121 @@ namespace MyBooks.Service
 
 
 
-            // BOOKS
+            // ❤️ BROJ FAVORITA
+            var brojFavorita = await _context.Knjigas
+                .CountAsync(x =>
+                    x.KorisnikId == korisnikId &&
+                    x.IsFavorite == true);
 
-            if (brojKnjiga >= 1)
+
+
+            // 😊 BROJ RAZLIČITIH RASPOLOŽENJA
+            var brojMoodova = await _context.Knjigas
+                .Where(x =>
+                    x.KorisnikId == korisnikId &&
+                    x.Mood != null)
+                .Select(x => x.Mood)
+                .Distinct()
+                .CountAsync();
+
+
+
+            // 🔥 STREAK
+            var citatStatistika =
+                await _citatStatistikaService
+                .GetStatistika(korisnikId);
+
+
+            var najduziStreak =
+                citatStatistika.NajduziNiz;
+
+
+
+            // UČITAJ SVE ZNAČKE IZ BAZE
+            var sveZnacke =
+                await _context.Znackas
+                .ToListAsync();
+
+
+
+            foreach (var znacka in sveZnacke)
             {
-                await DodajZnackuAkoNema(korisnikId, 1);
+                bool osvojena = false;
+
+
+                switch (znacka.Tip)
+                {
+
+                    // 📚 KNJIGE
+                    case "Books":
+
+                        osvojena =
+                            brojKnjiga >= znacka.Prag;
+
+                        break;
+
+
+
+                    // 💬 CITATI
+                    case "Quotes":
+
+                        osvojena =
+                            brojCitata >= znacka.Prag;
+
+                        break;
+
+
+
+                    // 🧭 ŽANROVI
+                    case "Genres":
+
+                        osvojena =
+                            brojZanrova >= znacka.Prag;
+
+                        break;
+
+
+
+                    // ❤️ FAVORITI
+                    case "Favorites":
+
+                        osvojena =
+                            brojFavorita >= znacka.Prag;
+
+                        break;
+
+
+
+                    // 😊 MOOD
+                    case "Mood":
+
+                        osvojena =
+                            brojMoodova >= znacka.Prag;
+
+                        break;
+
+
+
+                    // 🔥 STREAK
+                    case "Streak":
+
+                        osvojena =
+                            najduziStreak >= znacka.Prag;
+
+                        break;
+                }
+
+
+
+                if (osvojena)
+                {
+                    await DodajZnackuAkoNema(
+                        korisnikId,
+                        znacka.Id
+                    );
+                }
             }
-
-
-            if (brojKnjiga >= 5)
-            {
-                await DodajZnackuAkoNema(korisnikId, 2);
-            }
-
-
-            if (brojKnjiga >= 10)
-            {
-                await DodajZnackuAkoNema(korisnikId, 3);
-            }
-
-
-
-            // QUOTES
-
-            if (brojCitata >= 1)
-            {
-                await DodajZnackuAkoNema(korisnikId, 4);
-            }
-
-
-            if (brojCitata >= 5)
-            {
-                await DodajZnackuAkoNema(korisnikId, 5);
-            }
-
-
-            if (brojCitata >= 10)
-            {
-                await DodajZnackuAkoNema(korisnikId, 6);
-            }
-
-
-
-            // GENRES
-
-            if (brojZanrova >= 5)
-            {
-                await DodajZnackuAkoNema(korisnikId, 7);
-            }
-
         }
-
 
 
 

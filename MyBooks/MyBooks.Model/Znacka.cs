@@ -14,5 +14,6 @@ namespace MyBooks.Model
         public string? Ikonica { get; set; }
         public string Tip { get; set; } = null!;
         public int Prag { get; set; }
+        public int? Nivo { get; set; }
     }
 }
