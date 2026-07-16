@@ -12,9 +12,9 @@ class Statistika {
 
   List<TopAutor>? topAutori;
   List<MoodStatistika>? moodStatistika;
-  
+    List<TopZanr>? zanrovskiDNK;
   Statistika(this.ukupnoKnjiga, this.prosjecnaOcjena, this.knjigePoMjesecima,
-      this.topZanrovi, this.topAutori, this.moodStatistika);
+      this.topZanrovi, this.topAutori, this.moodStatistika, this.zanrovskiDNK);
 
   factory Statistika.fromJson(Map<String, dynamic> json) =>
       _$StatistikaFromJson(json);

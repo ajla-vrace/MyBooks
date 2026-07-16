@@ -235,6 +235,33 @@ namespace MyBooks.Service
     .ToListAsync();
 
             result.MoodStatistika = moodStatistika;
+
+
+            // =======================
+            // ŽANROVSKI DNK
+            // =======================
+
+            var sviTagovi = knjige
+                .SelectMany(k => k.KnjigaZanrs)
+                .ToList();
+
+            int ukupnoTagova = sviTagovi.Count;
+
+            result.ZanrovskiDNK = sviTagovi
+                .GroupBy(x => x.IdZanrNavigation.Naziv)
+                .Select(g => new ZanrStatistika
+                {
+                    Naziv = g.Key,
+                    Broj = g.Count(),
+                    Postotak = ukupnoTagova == 0
+                        ? 0
+                        : Math.Round((double)g.Count() * 100 / ukupnoTagova, 1)
+                })
+                .OrderByDescending(x => x.Broj)
+                .ToList();
+
+
+
             return result;
         }
         public override async Task<bool> Delete(int id)

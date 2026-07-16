@@ -9,6 +9,7 @@
     public List<ZanrStatistika> TopZanrovi { get; set; } = new();
     public List<AutorStatistika> TopAutori { get; set; } = new();
     public List<MoodStatistika> MoodStatistika { get; set; }
+    public List<ZanrStatistika> ZanrovskiDNK { get; set; } = new();
 }
 
 public class BrojPoMjesecu

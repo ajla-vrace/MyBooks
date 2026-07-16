@@ -1,17 +1,35 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+
 import 'package:mybooks_mobile/authorization.dart';
+
 import 'dart:convert';
+
 import 'package:mybooks_mobile/models/knjiga.dart';
+
 import 'package:mybooks_mobile/models/korisnik_znacka.dart';
+
+import 'package:mybooks_mobile/models/statistika.dart';
+
 import 'package:mybooks_mobile/models/zanr.dart';
+
 import 'package:mybooks_mobile/models/znacka.dart';
+
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
+
+import 'package:mybooks_mobile/providers/statistika_provider.dart';
+
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
+
 import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
+
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
+
 import 'package:mybooks_mobile/providers/znacke_provider.dart';
+
 import 'package:mybooks_mobile/screens/add_wish_screen.dart';
+
 import 'package:mybooks_mobile/screens/login_screen.dart';
 
 /// Zvijezda koja "živi" - blago pulsira sjajem i veličinom, svaka svojim
@@ -259,6 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Znacka> sveZnacke = [];
   List<int> otkljucaneZnacke = [];
   List<KorisnikZnacka> znacke = [];
+  Statistika? statistika;
   String? selectedStarKey;
 
   bool isLoading = true;
@@ -290,6 +309,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       var sveZnackeResult = await sveZnackeProvider.get();
 
+      var statistikaProvider = StatistikaProvider();
+      var statistikaResult =
+          await statistikaProvider.getStatistika(Authorization.korisnik!.id);
+
       setState(() {
         wish = wishResult.result.reversed.toList();
         favorites = knjigaResult.result.where((k) => k.isFavorite).toList();
@@ -298,6 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         sveZnacke = sveZnackeResult.result;
         znacke = znackaResult.result;
         otkljucaneZnacke = znackaResult.result.map((x) => x.znackaId!).toList();
+        statistika = statistikaResult;
         isLoading = false;
       });
     } catch (e) {
@@ -827,6 +851,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Jedan red žanrovskog DNK-a: naziv žanra, procenat + broj knjiga i
+  /// animirana traka napunjena prema procentu zastupljenosti tog žanra.
+  Widget buildDnkRow(TopZanr zanr) {
+    final boja = colorForGenre(zanr.naziv);
+    final postotak = (zanr.postotak ?? 0).clamp(0, 100).toDouble();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: boja,
+                  boxShadow: [
+                    BoxShadow(color: boja.withOpacity(0.6), blurRadius: 5),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  zanr.naziv ?? "Nepoznato",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Text(
+                "${postotak.toStringAsFixed(1)}%  ·  ${zanr.broj ?? 0} knj.",
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  width: double.infinity,
+                  color: Colors.grey.shade200,
+                ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOut,
+                      height: 8,
+                      width: constraints.maxWidth * (postotak / 100),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [boja.withOpacity(0.7), boja],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1311,8 +1408,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             const SizedBox(height: 10),
 
-                            /// 🏅 ZNAČKE (uskoro - trenutno samo placeholder)
-                            /// 🏅 ZNAČKE
+                            /// 🧬 NAPREDNA STATISTIKA
+                            ExpansionTile(
+                              leading: const Icon(Icons.insights,
+                                  color: Color(0xFF1B5E20)),
+                              title: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    "Napredna statistika",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    "Tvoj žanrovski DNK 🧬",
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              children: [
+                                if (statistika == null ||
+                                    statistika!.zanrovskiDNK == null ||
+                                    statistika!.zanrovskiDNK!.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Text(
+                                      "Nema dovoljno podataka za statistiku 🧬",
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  )
+                                else
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(14, 6, 14, 12),
+                                    child: Column(
+                                      children: statistika!.zanrovskiDNK!
+                                          .map((z) => buildDnkRow(z))
+                                          .toList(),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
                             /// 🏅 ZNAČKE
                             ExpansionTile(
                               leading: const Icon(
