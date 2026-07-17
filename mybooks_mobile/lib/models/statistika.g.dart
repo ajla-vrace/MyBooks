@@ -24,7 +24,9 @@ Statistika _$StatistikaFromJson(Map<String, dynamic> json) => Statistika(
       (json['zanrovskiDNK'] as List<dynamic>?)
           ?.map((e) => TopZanr.fromJson(e as Map<String, dynamic>))
           .toList(),
-    );
+    )..histogramOcjena = (json['histogramOcjena'] as List<dynamic>?)
+        ?.map((e) => OcjenaStatistika.fromJson(e as Map<String, dynamic>))
+        .toList();
 
 Map<String, dynamic> _$StatistikaToJson(Statistika instance) =>
     <String, dynamic>{
@@ -35,6 +37,7 @@ Map<String, dynamic> _$StatistikaToJson(Statistika instance) =>
       'topAutori': instance.topAutori,
       'moodStatistika': instance.moodStatistika,
       'zanrovskiDNK': instance.zanrovskiDNK,
+      'histogramOcjena': instance.histogramOcjena,
     };
 
 KnjigePoMjesecu _$KnjigePoMjesecuFromJson(Map<String, dynamic> json) =>
@@ -83,4 +86,16 @@ Map<String, dynamic> _$TopAutorToJson(TopAutor instance) => <String, dynamic>{
       'imeAutora': instance.imeAutora,
       'brojKnjiga': instance.brojKnjiga,
       'postotak': instance.postotak,
+    };
+
+OcjenaStatistika _$OcjenaStatistikaFromJson(Map<String, dynamic> json) =>
+    OcjenaStatistika(
+      json['ocjena'] as int?,
+      json['broj'] as int?,
+    );
+
+Map<String, dynamic> _$OcjenaStatistikaToJson(OcjenaStatistika instance) =>
+    <String, dynamic>{
+      'ocjena': instance.ocjena,
+      'broj': instance.broj,
     };

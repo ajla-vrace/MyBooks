@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mybooks_mobile/authorization.dart';
@@ -271,8 +272,7 @@ class _GalaxyCoreState extends State<_GalaxyCore>
               ),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      Colors.white.withOpacity((0.8 * glow).clamp(0.0, 1.0)),
+                  color: Colors.white.withOpacity((0.8 * glow).clamp(0.0, 1.0)),
                   blurRadius: widget.size * 1.3,
                   spreadRadius: widget.size * 0.28,
                 ),
@@ -629,6 +629,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return centers;
   }
 
+
+
+
   /// Jedna zvijezda u sazviježđu - veličina i sjaj zavise od ocjene, boja od
   /// žanra, pozicija dolazi iz unaprijed izračunatog layouta (bez preklapanja).
   /// Klik otvara/zatvara inline karticu.
@@ -902,6 +905,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget buildZanrovskiDnk() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Žanrovski DNK 🧬",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          if (statistika == null ||
+              statistika!.zanrovskiDNK == null ||
+              statistika!.zanrovskiDNK!.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                "Nema dovoljno podataka za statistiku 🧬",
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                children: statistika!.zanrovskiDNK!
+                    .map((z) => buildDnkRow(z))
+                    .toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildHistogramOcjena() {
+    if (statistika?.histogramOcjena == null ||
+        statistika!.histogramOcjena!.isEmpty) {
+      return const SizedBox();
+    }
+
+    final maxBroj = statistika!.histogramOcjena!
+        .map((e) => e.broj ?? 0)
+        .reduce((a, b) => a > b ? a : b);
+
+    // Isti padding, veličina naslova i visina traka kao Žanrovski DNK,
+    // da obje sekcije vizuelno budu istog "gabarita".
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Histogram ocjena ⭐",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...statistika!.histogramOcjena!.map((e) {
+            double widthFactor = maxBroj == 0 ? 0 : (e.broj! / maxBroj);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 28,
+                    child: Text(
+                      "${e.ocjena}★",
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: widthFactor,
+                        minHeight: 8,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor:
+                            const AlwaysStoppedAnimation(Color(0xFF1B5E20)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 25,
+                    child: Text(
+                      "${e.broj}",
+                      textAlign: TextAlign.end,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
       ),
     );
   }
@@ -1218,7 +1332,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Wrap(
                 spacing: 18,
                 runSpacing: 20,
-                children: grupa.map((znacka) => buildZnackaBadge(znacka)).toList(),
+                children:
+                    grupa.map((znacka) => buildZnackaBadge(znacka)).toList(),
               ),
               const SizedBox(height: 4),
             ],
@@ -1694,7 +1809,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           centerOf: (b) =>
                                                               layout[starKeyFor(
                                                                   b)] ??
-                                                              Offset(canvasW / 2,
+                                                              Offset(
+                                                                  canvasW / 2,
                                                                   canvasH / 2),
                                                           colorForGenre:
                                                               colorForGenre,
@@ -1759,7 +1875,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               children: [
-                                Padding(
+                                /*Padding(
                                   padding:
                                       const EdgeInsets.fromLTRB(14, 8, 14, 4),
                                   child: Text(
@@ -1783,14 +1899,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   )
                                 else
                                   Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(14, 6, 14, 12),
+                                    padding: const EdgeInsets.fromLTRB(
+                                        14, 6, 14, 12),
                                     child: Column(
                                       children: statistika!.zanrovskiDNK!
                                           .map((z) => buildDnkRow(z))
                                           .toList(),
                                     ),
-                                  ),
+                                  ),*/
+                                const SizedBox(height: 30),
+                                buildZanrovskiDnk(),
+                                const SizedBox(height: 30),
+                                buildHistogramOcjena(),
                               ],
                             ),
 
@@ -1798,6 +1918,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             /// 🏅 ZNAČKE
                             ExpansionTile(
+                              //maintainState: true,
                               key: const PageStorageKey('tile_badges'),
                               leading: const Icon(
                                 Icons.workspace_premium,
@@ -1828,9 +1949,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 // znački) podstablo od ostatka ListView-a, da
                                 // skrolanje tokom/nakon otvaranja sekcije ne
                                 // izazove trzajuće iscrtavanje cijele liste
-                                RepaintBoundary(
+                                /*RepaintBoundary(
                                   child: buildZnackeByNivo(),
-                                ),
+                                ),*/
+                                buildZnackeByNivo(),
                               ],
                             ),
 
