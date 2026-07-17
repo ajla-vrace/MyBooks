@@ -5,10 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
 
-/// Zvijezda koja "živi" - blago pulsira sjajem i veličinom, svaka svojim
-/// tempom (seed po knjizi), tako da cijelo sazviježđe djeluje živo i asinhrono.
-/// `intensity` (0..1, obično = ocjena/5) diže fiksnu bazu sjaja i blur/spread,
-/// tako da bolje ocijenjene knjige "gore" jače, nezavisno od pulsiranja.
+
 class _TwinklingStar extends StatefulWidget {
   final double size;
   final Color color;
@@ -107,8 +104,7 @@ class _TwinklingStarState extends State<_TwinklingStar>
   }
 }
 
-/// Iscrtava tanke linije koje povezuju zvijezde istog žanra (u "lanac",
-/// ne sve-sa-svima, da ne napravi paučinu kod veće biblioteke).
+
 class _GenreLinesPainter extends CustomPainter {
   final List<Knjiga> books;
   final Offset Function(Knjiga) centerOf;
@@ -146,8 +142,7 @@ class _GenreLinesPainter extends CustomPainter {
       oldDelegate.books != books;
 }
 
-/// Centar galaksije - veći, "mirniji" i jače usijan sjaj od zvijezda, da se
-/// odmah vizuelno izdvoji kao gravitaciono središte oko kojeg sve orbitira.
+
 class _GalaxyCore extends StatefulWidget {
   final double size;
 
@@ -164,8 +159,7 @@ class _GalaxyCoreState extends State<_GalaxyCore>
   @override
   void initState() {
     super.initState();
-    // sporiji, "dubinski" damar - jasno drugačiji tempo od zvijezda
-    // (koje pulsiraju 0.9s-1.9s) da core djeluje stabilno i moćno
+   
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2800),
@@ -229,10 +223,7 @@ class _GalaxyCoreState extends State<_GalaxyCore>
   }
 }
 
-/// Puni ekran za sazviježđe pročitanih knjiga - izdvojen iz ProfileScreen-a
-/// da se izbjegne sukob gestova (pan/zoom galaksije protiv vanjskog scrolla
-/// ili tab swipe-a). Standardni AppBar automatski dobija strelicu nazad
-/// (Navigator je push-ovao ovaj ekran, pa `Navigator.pop` radi iz kutije).
+
 class ConstellationScreen extends StatefulWidget {
   final List<Knjiga> procitane;
 
@@ -287,18 +278,6 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
   String starKeyFor(Knjiga book) =>
       (book.id ?? book.naslov.hashCode).toString();
 
-  /// Izračunava centar svake zvijezde na platnu, bez preklapanja.
-  ///
-  /// Koraci:
-  /// 1. Knjige se grupišu po ocjeni (1-5) u "prstenove" - bolja ocjena znači
-  ///    manji radijus (bliže centru), po uzoru na orbite.
-  /// 2. Unutar prstena, ugao se raspoređuje ravnomjerno (2π/n po knjizi) +
-  ///    mali seeded jitter, umjesto čistog nasumičnog ugla - to samo po sebi
-  ///    drastično smanjuje šansu da dvije zvijezde padnu na skoro isto mjesto.
-  /// 3. Minimalni radijus je veći od poluprečnika centralne ikonice galaksije
-  ///    plus margina, pa nijedna zvijezda ne može fizički pasti na "core".
-  /// 4. Relaksacioni prolaz (nekoliko desetina iteracija) na kraju razmakne
-  ///    svaki par zvijezda (i zvijezdu-core) koji se i dalje sudaraju.
   Map<String, Offset> computeStarLayout(
     List<Knjiga> books,
     double canvasW,
@@ -401,9 +380,6 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
     return centers;
   }
 
-  /// Jedna zvijezda u sazviježđu - veličina i sjaj zavise od ocjene, boja od
-  /// žanra, pozicija dolazi iz unaprijed izračunatog layouta (bez preklapanja).
-  /// Klik otvara/zatvara inline karticu.
   Widget buildStar(Knjiga book, Offset center) {
     final ocjena = (book.ocjena ?? 0).clamp(1, 5);
     final size = 12.0 + (ocjena * 7); // ocjena 1-5 -> veličina cca 19-47
@@ -517,10 +493,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
     );
   }
 
-  /// Centar galaksije - blista kao "core" oko kojeg orbitiraju knjige.
-  /// NAPOMENA: `coreSize` ovdje mora ostati usklađen sa `coreRadius` u
-  /// `computeStarLayout` (coreRadius = coreSize / 2), inače će razmak koji
-  /// štiti core od preklapanja biti pogrešan.
+  
   Widget buildGalaxyCore(double canvasW, double canvasH) {
     final centerX = canvasW / 2;
     final centerY = canvasH / 2;
@@ -533,7 +506,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
     );
   }
 
-  /// Pozadina nalik svemiru: tamni gradijent + "nebula" mrlje + sitne pozadinske zvjezdice.
+  
   Widget buildGalaxyBackground(double width, double height) {
     final bgStars =
         Random(1234); // fiksni seed - iste pozadinske zvjezdice svaki put
@@ -631,8 +604,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
     );
   }
 
-  /// Legenda boja - koji žanr je koja boja, na osnovu svih pročitanih knjiga.
-  /// Stilizirana za tamnu pozadinu (cijeli ekran je sad svemir, ne bijela kartica).
+  
   Widget buildGenreLegend() {
     final genres = <String>{};
     for (final b in widget.procitane) {
@@ -686,8 +658,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // Navigator je push-ovao ovaj ekran, pa AppBar automatski dobija
-        // strelicu nazad (leading back button) koja poziva Navigator.pop().
+       
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           "Sazviježđe knjiga",
@@ -711,9 +682,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
                           final viewportW = constraints.maxWidth;
                           final viewportH = constraints.maxHeight;
 
-                          // platno je veće od vidljivog okvira - raste sa
-                          // brojem knjiga da zvijezde imaju više prostora i
-                          // manje se guraju; korisnik zumira/pomjera pogled
+                        
                           final canvasW =
                               viewportW + widget.procitane.length * 26;
                           final canvasH =
@@ -727,9 +696,7 @@ class _ConstellationScreenState extends State<ConstellationScreen> {
                             }
                           }
 
-                          // layout se računa jednom po veličini platna
-                          // (deterministički po id-u knjige) - garantuje da
-                          // se zvijezde ne preklapaju
+                      
                           final layout = computeStarLayout(
                               widget.procitane, canvasW, canvasH);
 
