@@ -54,10 +54,19 @@ namespace MyBooks.Service
                     x.KnjigaZanrs.Any(kz => kz.IdZanr == zanrId)
                 );
             }
+            if (search?.NaDanasnjiDan == true)
+            {
+                var danas = DateTime.Today;
 
+                filteredQuery = filteredQuery.Where(x =>
+                    x.DatumKreiranja.HasValue &&
+                    x.DatumKreiranja.Value.Month == danas.Month &&
+                    x.DatumKreiranja.Value.Day == danas.Day
+                );
+            }
 
             // Ako je korisničko ime i naziv usluge uneseno
-          
+
 
             return filteredQuery;
         }

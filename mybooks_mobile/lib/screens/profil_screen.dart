@@ -19,6 +19,7 @@ import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/widgets/mood_ring_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -42,6 +43,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   CitatStatistika? citatStatistika;
 
   List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
+
+  List get booksPerMonth => statistika?.knjigePoMjesecima ?? [];
+  List get genres => statistika?.topZanrovi ?? [];
+  List get authors => statistika?.topAutori ?? [];
 
   // Umjesto ExpansionTile sekcija koje su dijelile isti scroll (i pravile
   // probleme kod velikog broja stavki - wishlist, značke, statistika),
@@ -131,46 +136,48 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Boja za konkretan naziv žanra - živopisna, "neon" paleta za svemirski osjećaj.
-  /// (Koristi se ovdje samo za Naprednu statistiku/DNK - sazviježđe ima svoju
-  /// kopiju u ConstellationScreen-u jer je taj ekran potpuno samostalan.)
-  /// NAPOMENA: ako `Zanr` model nema polje `naziv`, prilagodi poziv ove funkcije.
+  Color getGenreColor(int index) {
+    final colors = [
+      const Color(0xFF6D8B74),
+      const Color(0xFFA4B494),
+      const Color(0xFFD8C3A5),
+      const Color(0xFFB7B7A4),
+      const Color(0xFF8AA29E),
+      const Color(0xFFE6B89C),
+    ];
+    return colors[index % colors.length];
+  }
+
   Color colorForGenre(String? naziv) {
     switch (naziv) {
       case "Roman":
-        return const Color(0xFFFFD54F); // toplo zlatna
+        return const Color(0xFFFFD54F);
       case "Fantastika":
-        return const Color(0xFFBA68C8); // ljubičasta
+        return const Color(0xFFBA68C8);
       case "Triler":
-        return const Color(0xFFFF5252); // vatreno crvena
+        return const Color(0xFFFF5252);
       case "Naučna fantastika":
-        return const Color(0xFF40C4FF); // električno plava
+        return const Color(0xFF40C4FF);
       case "Biografija":
-        return const Color(0xFFFFAB40); // toplo narandžasta
+        return const Color(0xFFFFAB40);
       case "Poezija":
-        return const Color(0xFFFF4081); // pink/magenta
+        return const Color(0xFFFF4081);
       case "Horor":
-        return const Color(0xFF69F0AE); // toksično zelena
+        return const Color(0xFF69F0AE);
       case "Misterija":
-        return const Color(0xFF7C4DFF); // indigo
+        return const Color(0xFF7C4DFF);
       case "Drama":
-        return const Color(0xFF18FFFF); // cyan
+        return const Color(0xFF18FFFF);
       case "Avantura":
-        return const Color(0xFFEEFF41); // limun/žuto-zelena
+        return const Color(0xFFEEFF41);
       default:
         if (naziv == null || naziv.isEmpty) return Colors.white70;
         final hash = naziv.hashCode;
         final hue = (hash % 360).abs().toDouble();
-        // visoka zasićenost i svjetlina -> "neon" izgled i za nepoznate žanrove
         return HSVColor.fromAHSV(1, hue, 0.75, 1.0).toColor();
     }
   }
 
-  /// Ista "porodica" boja kao `colorForGenre`, ali prigušena za svijetlu
-  /// pozadinu (koristi se u Naprednoj statistici/DNK-u). `colorForGenre`
-  /// je namjerno neon-zasićena za tamnu svemirsku pozadinu, pa ta ista
-  /// paleta na bijeloj kartici djeluje presirovo - ovdje se ista boja
-  /// (isti hue) samo spusti na nižu zasićenost i svjetlinu.
   Color colorForGenreMuted(String? naziv) {
     final boja = colorForGenre(naziv);
     if (boja == Colors.white70) return Colors.grey.shade400;
@@ -283,6 +290,159 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: MoodRingChart(
         moods: statistika!.moodStatistika!,
       ),
+    );
+  }
+
+  Widget buildBooksChart() {
+    if (booksPerMonth.isEmpty) return const SizedBox();
+
+    return SizedBox(
+      height: 250,
+      child: BarChart(
+        BarChartData(
+          borderData: FlBorderData(show: false),
+          gridData: FlGridData(show: true),
+          alignment: BarChartAlignment.spaceAround,
+          barTouchData: BarTouchData(enabled: false),
+          titlesData: FlTitlesData(
+            topTitles: AxisTitles(),
+            rightTitles: AxisTitles(),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: true),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  int index = value.toInt();
+                  if (index >= booksPerMonth.length) {
+                    return const SizedBox();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      booksPerMonth[index].mjesec ?? "",
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          barGroups: List.generate(
+            booksPerMonth.length,
+            (index) => BarChartGroupData(
+              x: index,
+              barRods: [
+                BarChartRodData(
+                  toY: (booksPerMonth[index].broj ?? 0).toDouble(),
+                  width: 22,
+                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFF6D8B74),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildGenreChart() {
+    if (genres.isEmpty) return const SizedBox();
+
+    return SizedBox(
+      height: 240,
+      child: PieChart(
+        PieChartData(
+          sectionsSpace: 3,
+          centerSpaceRadius: 55,
+          sections: genres.asMap().entries.map((entry) {
+            final index = entry.key;
+            final g = entry.value;
+
+            return PieChartSectionData(
+              color: getGenreColor(index),
+              value: (g.postotak ?? 0).toDouble(),
+              title: "${g.postotak?.toStringAsFixed(0)}%",
+              radius: 70,
+              titleStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget buildGenreLegend() {
+    if (genres.isEmpty) return const SizedBox();
+
+    return Column(
+      children: genres.asMap().entries.map((entry) {
+        final index = entry.key;
+        final g = entry.value;
+
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: CircleAvatar(
+            radius: 7,
+            backgroundColor: getGenreColor(index),
+          ),
+          title: Text(g.naziv ?? ""),
+          trailing: Text(
+            "${g.broj} knjiga",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget buildTopAutori(List topAutori) {
+    if (topAutori.isEmpty) return const SizedBox();
+
+    final max =
+        topAutori.map((e) => e.brojKnjiga ?? 0).reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      children: topAutori.map((a) {
+        final percent = (a.brojKnjiga ?? 0) / max;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  a.imeAutora ?? "",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: percent.toDouble(),
+                    minHeight: 12,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: const AlwaysStoppedAnimation(
+                      Color(0xFF6D8B74),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text("${a.brojKnjiga}"),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -403,8 +563,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Jedan red žanrovskog DNK-a: naziv žanra, procenat + broj knjiga i
-  /// animirana traka napunjena prema procentu zastupljenosti tog žanra.
   Widget buildDnkRow(TopZanr zanr) {
     final boja = colorForGenreMuted(zanr.naziv);
     final postotak = (zanr.postotak ?? 0).clamp(0, 100).toDouble();
@@ -476,30 +634,25 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Boja po nivou značke - fiksna "tier" skala, ista za sve porodice
-  /// znački (knjige, citati...) jer je vezana za `nivo`, a ne za `Tip`.
-  /// NAPOMENA: pretpostavljam da `Znacka` ima polje `nivo` (int?, 1-5).
-  /// Ako se polje zove drugačije, samo prilagodi `znacka.nivo` pozive niže.
   Color colorForNivo(int? nivo) {
     switch (nivo) {
       case 1:
-        return const Color(0xFFCD7F32); // bronza
+        return const Color(0xFFCD7F32);
       case 2:
-        return const Color(0xFF9E9E9E); // srebro
+        return const Color(0xFF9E9E9E);
       case 3:
-        return const Color(0xFFFFC107); // zlato
+        return const Color(0xFFFFC107);
       case 4:
-        return const Color(0xFF29B6F6); // platina
+        return const Color(0xFF29B6F6);
       case 5:
-        return const Color(0xFF66BB6A); // smaragd
+        return const Color(0xFF66BB6A);
       case 6:
-        return const Color(0xFFAB47BC); // dijamant/ljubičasta
+        return const Color(0xFFAB47BC);
       default:
-        return const Color(0xFF1B5E20); // fallback - značke bez nivoa
+        return const Color(0xFF1B5E20);
     }
   }
 
-  /// Naziv nivoa za naslov sekcije u prikazu značke po nivoima.
   String nivoLabel(int? nivo) {
     switch (nivo) {
       case 1:
@@ -519,8 +672,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Jedna značka: obojena prema nivou ako je otključana, siva ako nije.
-  /// Klik otvara isti popup sa opisom i datumom otključavanja kao i prije.
   Widget buildZnackaBadge(Znacka znacka) {
     final bool otkljucana = otkljucaneZnacke.contains(znacka.id);
 
@@ -602,7 +753,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                         LinearProgressIndicator(
                           value: progress,
                           minHeight: 8,
-                          //borderRadius: BorderRadius.circular(10),
                           backgroundColor: Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation(
                             otkljucana ? Colors.green : boja,
@@ -674,7 +824,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 6),
               SizedBox(
                 width: 90,
-                height: 34, // uvijek rezerviše prostor za 2 reda
+                height: 34,
                 child: Text(
                   znacka.naziv ?? "",
                   textAlign: TextAlign.center,
@@ -860,8 +1010,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  /// Sve značke grupisane po nivou (1-5), svaki nivo sa svojim naslovom
-  /// i bojom - otključane značke nose boju svog nivoa, zaključane su sive.
   Widget buildZnackeByNivo() {
     if (sveZnacke.isEmpty) {
       return const Padding(
@@ -931,10 +1079,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ---------------------------------------------------------------------
-  // HEATMAP ČITALAČKE AKTIVNOSTI (premješteno iz HomeScreen)
-  // ---------------------------------------------------------------------
-
   Map<String, int> get heatmapData {
     final map = <String, int>{};
 
@@ -967,7 +1111,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget buildGitHubHeatmap() {
     final days = last365Days;
     final weeks = (days.length / 7).ceil();
-    final todayIndex = days.length - 1; // zadnji dan u listi je uvijek danas
+    final todayIndex = days.length - 1;
 
     const months = [
       "",
@@ -985,11 +1129,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       "Dec"
     ];
 
-    const double cellWidth = 14; // 10px ćelija + 2x2px margina po koloni
+    const double cellWidth = 14;
 
-    // Nakon prvog rendera, automatski skroluj tako da današnji dan bude
-    // vidljiv sa malo prostora s desne strane (umjesto da korisnik mora
-    // sam skrolati do kraja, ili da "danas" bude zalijepljeno za ivicu).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_heatmapScrolledToEnd && _heatmapScrollController.hasClients) {
         final maxScroll = _heatmapScrollController.position.maxScrollExtent;
@@ -998,8 +1139,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         final todayWeekOffset = (todayIndex ~/ 7) * cellWidth;
 
-        // ciljamo da današnja kolona bude vidljiva ~60% širine ekrana od
-        // lijeva, umjesto potpuno zalijepljena za desnu ivicu
         final target =
             (todayWeekOffset - viewportWidth * 0.6).clamp(0.0, maxScroll);
 
@@ -1021,7 +1160,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Nazivi mjeseci
               Row(
                 children: List.generate(weeks, (weekIndex) {
                   final firstIndex = weekIndex * 7;
@@ -1044,10 +1182,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 }),
               ),
-
               const SizedBox(height: 6),
-
-              // Heatmap
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: List.generate(weeks, (weekIndex) {
@@ -1101,14 +1236,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
-
-  // ---------------------------------------------------------------------
-  // TAB SADRŽAJI
-  // Svaki tab je svoj ListView -> nezavisan scroll. "Sazviježđe" tab je
-  // sad samo pregled/dugme koje otvara ConstellationScreen na punom ekranu
-  // (Navigator.push), umjesto da galaksija živi ugniježđena ovdje - tako
-  // nema sukoba pan/zoom gestova sa swipe-om tabova ili vanjskim scrollom.
-  // ---------------------------------------------------------------------
 
   Widget buildFavoritesTab() {
     if (favorites.isEmpty) {
@@ -1216,9 +1343,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Wishlist tab: dugme za dodavanje je uvijek fiksno na vrhu, a ispod
-  /// njega je Expanded prostor koji je ili centrirana poruka (prazna
-  /// lista, isto ponašanje kao Favorites) ili scrollabilna lista stavki.
   Widget buildWishlistTab() {
     return Column(
       children: [
@@ -1361,13 +1485,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Pregled/dugme za sazviježđe - stvarna galaksija sad živi na svom
-  /// ekranu (ConstellationScreen), otvorenom preko Navigator.push, sa
-  /// AppBar strelicom nazad koja se dobija automatski od Flutter-a jer
-  /// je ekran push-ovan (Navigator.pop na strelicu vraća ovdje).
-  /// LayoutBuilder + SingleChildScrollView + ConstrainedBox(minHeight) su
-  /// dodani da sadržaj i dalje bude vertikalno centriran kad ima mjesta,
-  /// ali da se scrolla umjesto da overflow-uje na manjim ekranima.
   Widget buildConstellationTab() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1457,6 +1574,33 @@ class _ProfileScreenState extends State<ProfileScreen>
         buildZanrovskiDnk(),
         const SizedBox(height: 20),
         buildHistogramOcjena(),
+        const SizedBox(height: 20),
+        if (booksPerMonth.isNotEmpty)
+          buildStatCard(
+            title: "Knjige po mjesecima",
+            emoji: "📚",
+            child: buildBooksChart(),
+          ),
+        const SizedBox(height: 20),
+        if (genres.isNotEmpty)
+          buildStatCard(
+            title: "Najčitaniji žanrovi",
+            emoji: "🏆",
+            child: Column(
+              children: [
+                buildGenreChart(),
+                const SizedBox(height: 15),
+                buildGenreLegend(),
+              ],
+            ),
+          ),
+        const SizedBox(height: 20),
+        if (authors.isNotEmpty)
+          buildStatCard(
+            title: "Top autori",
+            emoji: "✍️",
+            child: buildTopAutori(authors),
+          ),
         const SizedBox(height: 20),
         if (citatiPoDanima.isNotEmpty)
           buildStatCard(

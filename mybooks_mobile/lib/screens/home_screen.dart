@@ -1,7 +1,10 @@
+import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
+import 'package:mybooks_mobile/data/moods.dart';
 import 'package:mybooks_mobile/models/citat_statistika.dart';
+import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/statistika.dart';
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
 import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
@@ -32,6 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool imaKnjiga = false;
   bool imaWishKnjiga = false;
   final currentYear = DateTime.now().year;
+
+  Knjiga? danasnjaKnjiga;
   @override
   void initState() {
     super.initState();
@@ -88,7 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
           "KorisnikId": korisnikId,
         },
       );
-
+      var danas = await KnjigaProvider().get(
+        filter: {
+          "KorisnikId": korisnikId,
+          "NaDanasnjiDan": true,
+        },
+      );
       if (!mounted) return;
 
       setState(() {
@@ -102,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
         imaKnjiga = knjige.result.isNotEmpty;
 
         imaWishKnjiga = wishKnjige.result.isNotEmpty;
-
+        danasnjaKnjiga = danas.result.isNotEmpty ? danas.result.first : null;
         isLoading = false;
       });
     } catch (e) {
@@ -161,6 +171,266 @@ class _HomeScreenState extends State<HomeScreen> {
   List get genres => statistika?.topZanrovi ?? [];
   List get authors => statistika?.topAutori ?? [];
   List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
+
+  String getMoodEmoji(String? moodText) {
+    if (moodText == null) return "📖";
+
+    final found = moods.firstWhereOrNull(
+      (m) => m["text"] == moodText,
+    );
+
+    return found?["emoji"] ?? "📖";
+  }
+
+  Widget buildTodayMemoryCard() {
+    if (danasnjaKnjiga == null) {
+      return const SizedBox();
+    }
+
+    final datum = danasnjaKnjiga!.datumKreiranja;
+    final ocjena = danasnjaKnjiga!.ocjena ?? 0;
+    final isFav = danasnjaKnjiga!.isFavorite ?? false;
+    final mood = danasnjaKnjiga!.mood;
+
+    int godine = 0;
+    if (datum != null) {
+      godine = DateTime.now().year - datum.year;
+    }
+
+    // ispravna gramatika: godinu / godine / godina
+    String vremenskiTekst;
+    if (godine == 1) {
+      vremenskiTekst = "Prije godinu dana";
+    } else if (godine > 1 && godine < 5) {
+      vremenskiTekst = "Prije $godine godine";
+    } else {
+      vremenskiTekst = "Prije $godine godina";
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF6D8B74),
+              Color(0xFF4F6F58),
+            ],
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // suptilan dekorativni krug u pozadini
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.06),
+                ),
+              ),
+            ),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child:  Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("✨", style: TextStyle(fontSize: 11)),
+                          SizedBox(width: 4),
+                          Text(
+                            "Na današnji dan",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isFav) ...[
+                      const Icon(
+                        Icons.favorite,
+                        size: 15,
+                        color: Color(0xFFFF8FA3),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    // vremenska oznaka SAMO ako je proslih godina
+                    if (godine > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 11,
+                              color: Colors.white.withOpacity(0.85),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              vremenskiTekst,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.auto_stories,
+                        size: 24,
+                        color: Color(0xFF6D8B74),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            danasnjaKnjiga!.naslov ?? "",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.15,
+                            ),
+                          ),
+                          if (danasnjaKnjiga!.autor != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              danasnjaKnjiga!.autor!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.75),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                          if (ocjena > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (i) {
+                                return Icon(
+                                  i < ocjena.round()
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  size: 14,
+                                  color: const Color(0xFFFFD166),
+                                );
+                              }),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // MOOD — kompaktan red
+                if (mood != null && mood.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          getMoodEmoji(mood),
+                          style: const TextStyle(fontSize: 17),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            mood,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget buildBooksChart() {
     if (booksPerMonth.isEmpty) return const SizedBox();
@@ -489,6 +759,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                   /*buildDailyChallengeCard(),
                   const SizedBox(height: 24),*/
+                  if (danasnjaKnjiga != null) ...[
+                    buildTodayMemoryCard(),
+                    const SizedBox(height: 24),
+                  ],
                   if (imaKnjiga) ...[
                     buildDailyChallengeCard(),
                     const SizedBox(height: 24),
@@ -655,7 +929,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: 16),
                             //buildMonthLabels(),
                             //const SizedBox(height: 8),
-                           // buildGitHubHeatmap(),
+                            // buildGitHubHeatmap(),
                           ],
                         ),
                       ),
@@ -1100,147 +1374,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
- /* Widget buildHeatmap() {
-    if (citatiPoDanima.isEmpty) {
-      return const Text("Nema podataka");
-    }
-
-    // grupiramo po datumu (sigurnost)
-    Map<String, int> map = {};
-
-    for (var item in citatiPoDanima) {
-      if (item.datum == null) continue;
-
-      String key = item.datum!.toIso8601String().split("T")[0];
-      map[key] = (map[key] ?? 0) + (item.broj ?? 0);
-    }
-
-    final maxValue =
-        map.values.isNotEmpty ? map.values.reduce((a, b) => a > b ? a : b) : 1;
-
-    Color getColor(int value) {
-      if (value == 0) return Colors.grey.shade200;
-      if (value == 1) return const Color(0xFFA4B494);
-      if (value == 2) return const Color(0xFF6D8B74);
-      return const Color(0xFF2F5D50);
-    }
-
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      children: map.entries.map((entry) {
-        return Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            color: getColor(entry.value),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }).toList(),
-    );
-  }*/
-
-  /*Widget buildGitHubHeatmap() {
-    final days = last365Days;
-    final weeks = (days.length / 7).ceil();
-
-    const months = [
-      "",
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "Maj",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Okt",
-      "Nov",
-      "Dec"
-    ];
-
-    return SizedBox(
-      height: 170,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Nazivi mjeseci
-            Row(
-              children: List.generate(weeks, (weekIndex) {
-                final firstIndex = weekIndex * 7;
-
-                if (firstIndex >= days.length) {
-                  return const SizedBox(width: 14);
-                }
-
-                final firstDay = days[firstIndex];
-
-                return SizedBox(
-                  width: 14,
-                  child: Text(
-                    firstDay.day <= 7 ? months[firstDay.month] : "",
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 6),
-
-            // Heatmap
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(weeks, (weekIndex) {
-                return Column(
-                  children: List.generate(7, (dayIndex) {
-                    final index = weekIndex * 7 + dayIndex;
-
-                    if (index >= days.length) {
-                      return const SizedBox(
-                        width: 10,
-                        height: 10,
-                      );
-                    }
-
-                    final date = days[index];
-
-                    final key =
-                        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-                    final value = heatmapData[key] ?? 0;
-
-                    return Tooltip(
-                      message:
-                          "${date.day}.${date.month}.${date.year}\n$value citata",
-                      child: Container(
-                        margin: const EdgeInsets.all(2),
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: value == 0
-                              ? Colors.grey.shade200
-                              : heatColor(value),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    );
-                  }),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }*/
 
   Widget buildTopAutori(List topAutori) {
     if (topAutori.isEmpty) return const SizedBox();

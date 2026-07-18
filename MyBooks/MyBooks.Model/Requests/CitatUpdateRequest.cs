@@ -8,7 +8,7 @@ namespace MyBooks.Model.Requests
 {
     public class CitatUpdateRequest
     {
-       
-        public bool? JeOmiljeni { get; set; }
+        public DateTime? DatumKreiranja { get; set; }
+        //public bool? JeOmiljeni { get; set; }
     }
 }
