@@ -63,99 +63,142 @@ namespace MyBooks.Service
 
             return _mapper.Map<Model.Znacka>(entity);
         }
-       /* public async Task ProvjeriZnacke(int korisnikId)
+        public override async Task<PagedResult<Model.Znacka>> Get(ZnackaSearchObject? search)
         {
-
-            var brojKnjiga =
-                await _context.Knjigas
-                .CountAsync(x =>
-                    x.KorisnikId == korisnikId);
+            var result = await base.Get(search);
 
 
+            if (search?.KorisnikId == null)
+            {
+                return result;
+            }
 
-            var brojCitata =
-                await _context.Citats
+
+            int korisnikId = search.KorisnikId.Value;
+
+
+            // BROJ KNJIGA
+            int brojKnjiga = await _context.Knjigas
+                .CountAsync(x => x.KorisnikId == korisnikId);
+
+
+
+            // BROJ CITATA
+            int brojCitata = await _context.Citats
                 .CountAsync(x =>
                     x.IdKnjigaNavigation.KorisnikId == korisnikId);
 
 
 
-            // 1. PRVA KNJIGA
-            if (brojKnjiga >= 1)
+            // BROJ RAZLIČITIH ŽANROVA
+            int brojZanrova = await _context.KnjigaZanrs
+                .Where(x =>
+                    x.IdKnjigaNavigation.KorisnikId == korisnikId)
+                .Select(x => x.IdZanr)
+                .Distinct()
+                .CountAsync();
+
+
+
+            // BROJ FAVORITA
+            int brojFavorita = await _context.Knjigas
+                .CountAsync(x =>
+                    x.KorisnikId == korisnikId &&
+                    x.IsFavorite == true);
+
+
+
+            // BROJ RAZLIČITIH MOODOVA
+            int brojMoodova = await _context.Knjigas
+                .Where(x =>
+                    x.KorisnikId == korisnikId &&
+                    x.Mood != null)
+                .Select(x => x.Mood)
+                .Distinct()
+                .CountAsync();
+
+
+
+            // CURRENT STREAK
+            var danas = DateTime.Today;
+
+
+            var dani = await _context.Citats
+                .Where(c =>
+                    c.IdKnjigaNavigation.KorisnikId == korisnikId &&
+                    c.DatumKreiranja.HasValue)
+                .Select(c =>
+                    c.DatumKreiranja.Value.Date)
+                .Distinct()
+                .OrderByDescending(x => x)
+                .ToListAsync();
+
+
+
+            int streak = 0;
+
+            DateTime provjera = danas;
+
+
+            foreach (var dan in dani)
             {
-                await DodajZnackuAkoNema(
-                    korisnikId,
-                    1
-                );
+                if (dan == provjera)
+                {
+                    streak++;
+                    provjera = provjera.AddDays(-1);
+                }
+                else if (dan < provjera)
+                {
+                    break;
+                }
             }
 
 
 
-            // 2. KNJIŠKI MOLJAC
-            if (brojKnjiga >= 10)
+            // POPUNI PROGRESS
+            foreach (var znacka in result.Result)
             {
-                await DodajZnackuAkoNema(
-                    korisnikId,
-                    2
-                );
+                switch (znacka.Tip)
+                {
+                    case "Books":
+                        znacka.TrenutniNapredak = brojKnjiga;
+                        break;
+
+
+                    case "Quotes":
+                        znacka.TrenutniNapredak = brojCitata;
+                        break;
+
+
+                    case "Genres":
+                        znacka.TrenutniNapredak = brojZanrova;
+                        break;
+
+
+                    case "Favorites":
+                        znacka.TrenutniNapredak = brojFavorita;
+                        break;
+
+
+                    case "Mood":
+                        znacka.TrenutniNapredak = brojMoodova;
+                        break;
+
+
+                    case "Streak":
+                        znacka.TrenutniNapredak = streak;
+                        break;
+
+
+                    default:
+                        znacka.TrenutniNapredak = 0;
+                        break;
+                }
             }
 
 
-
-            // 3. LJUBITELJ CITATA
-            if (brojCitata >= 5)
-            {
-                await DodajZnackuAkoNema(
-                    korisnikId,
-                    3
-                );
-            }
-
+            return result;
         }
 
-
-
-
-        private async Task DodajZnackuAkoNema(
-            int korisnikId,
-            int znackaId)
-        {
-
-
-            bool postoji =
-                await _context.KorisnikZnackas
-                .AnyAsync(x =>
-                    x.KorisnikId == korisnikId &&
-                    x.ZnackaId == znackaId
-                );
-
-
-
-            if (!postoji)
-            {
-
-                var novaZnacka =
-                    new Database.KorisnikZnacka
-                    {
-
-                        KorisnikId = korisnikId,
-
-                        ZnackaId = znackaId,
-
-                        DatumOtkljucavanja = DateTime.Now
-
-                    };
-
-
-
-                _context.KorisnikZnackas.Add(novaZnacka);
-
-
-
-                await _context.SaveChangesAsync();
-
-            }
-
-        }*/
     }
 }

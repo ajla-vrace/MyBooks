@@ -57,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     loadData();
   }
 
@@ -86,7 +86,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
       var sveZnackeProvider = ZnackaProvider();
 
-      var sveZnackeResult = await sveZnackeProvider.get();
+      //var sveZnackeResult = await sveZnackeProvider.get();
+      var sveZnackeResult = await sveZnackeProvider
+          .get(filter: {"korisnikId": Authorization.korisnik!.id});
 
       var statistikaProvider = StatistikaProvider();
       var statistikaResult =
@@ -476,13 +478,21 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Klik otvara isti popup sa opisom i datumom otključavanja kao i prije.
   Widget buildZnackaBadge(Znacka znacka) {
     final bool otkljucana = otkljucaneZnacke.contains(znacka.id);
+
     final boja = colorForNivo(znacka.nivo);
 
+    final int trenutni = znacka.trenutniNapredak ?? 0;
+    final int prag = znacka.prag ?? 1;
+
+    final double progress = (trenutni / prag).clamp(0.0, 1.0);
+
     DateTime? datum;
+
     if (otkljucana) {
       final korisnikZnacka = znacke.firstWhere(
         (x) => x.znackaId == znacka.id,
       );
+
       datum = korisnikZnacka.datumOtkljucavanja;
     }
 
@@ -491,13 +501,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         return GestureDetector(
           onTap: () {
             final RenderBox box = context.findRenderObject() as RenderBox;
+
             final Offset position = box.localToGlobal(Offset.zero);
 
             showMenu(
               context: context,
               position: RelativeRect.fromLTRB(
                 position.dx - 40,
-                position.dy - 170,
+                position.dy - 230,
                 position.dx + 120,
                 position.dy,
               ),
@@ -505,7 +516,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 PopupMenuItem(
                   enabled: false,
                   child: SizedBox(
-                    width: 220,
+                    width: 230,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -513,7 +524,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           children: [
                             Text(
                               znacka.ikonica ?? "🏅",
-                              style: const TextStyle(fontSize: 28),
+                              style: const TextStyle(
+                                fontSize: 30,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -528,8 +541,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          znacka.opis ?? "Nema opisa",
+                          znacka.opis ?? "",
                           style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          otkljucana ? "✓ $prag/$prag" : "$trenutni/$prag",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: otkljucana ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 8,
+                          //borderRadius: BorderRadius.circular(10),
+                          backgroundColor: Colors.grey.shade200,
+                          valueColor: AlwaysStoppedAnimation(
+                            otkljucana ? Colors.green : boja,
+                          ),
                         ),
                         if (otkljucana && datum != null) ...[
                           const SizedBox(height: 10),
@@ -570,9 +602,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                   boxShadow: otkljucana
                       ? [
                           BoxShadow(
-                            color: boja.withOpacity(0.35),
-                            blurRadius: 6,
-                          )
+                            color: boja.withOpacity(0.45),
+                            blurRadius: 18,
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: boja.withOpacity(0.25),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
                         ]
                       : [],
                 ),
@@ -581,14 +619,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                     opacity: otkljucana ? 1 : 0.25,
                     child: Text(
                       znacka.ikonica ?? "🏅",
-                      style: const TextStyle(fontSize: 42),
+                      style: const TextStyle(
+                        fontSize: 42,
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               SizedBox(
                 width: 90,
+                height: 34, // uvijek rezerviše prostor za 2 reda
                 child: Text(
                   znacka.naziv ?? "",
                   textAlign: TextAlign.center,
@@ -596,16 +637,182 @@ class _ProfileScreenState extends State<ProfileScreen>
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
+                    height: 1.3,
                     fontWeight: FontWeight.bold,
                     color: otkljucana ? Colors.black : Colors.grey,
                   ),
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                "${trenutni >= prag ? prag : trenutni}/$prag",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: otkljucana ? Colors.green : Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 70,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 5,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation(
+                      otkljucana ? Colors.green : boja,
+                    ),
+                  ),
+                ),
+              )
             ],
           ),
         );
       },
     );
+  }
+
+  Widget buildZnackeSummary() {
+    final ukupno = sveZnacke.length;
+    final osvojeno = otkljucaneZnacke.length;
+
+    final double progress =
+        ukupno == 0 ? 0 : (osvojeno / ukupno).clamp(0.0, 1.0);
+
+    final preostalo = ukupno - osvojeno;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFF8E1),
+            Colors.white,
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFFFFC107).withOpacity(0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFC107).withOpacity(0.15),
+                ),
+                child: const Center(
+                  child: Text(
+                    "🏆",
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Moje značke",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                "$osvojeno/$ukupno",
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: const AlwaysStoppedAnimation(
+                Color(0xFFFFC107),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            preostalo == 0
+                ? "🎉 Sve značke su osvojene!"
+                : "Još $preostalo znački čeka ✨",
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> logout() async {
+    final potvrda = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Odjava"),
+          content: const Text(
+            "Da li ste sigurni da se želite odjaviti?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text("Odustani"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                "Odjavi se",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (potvrda == true) {
+      Authorization.korisnik = null;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+        (route) => false,
+      );
+    }
   }
 
   /// Sve značke grupisane po nivou (1-5), svaki nivo sa svojim naslovom
@@ -762,6 +969,37 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  Widget buildSettingsTab() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.settings,
+            size: 60,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 16),
+          Text(
+            "⚙️ Postavke",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            "Stiže uskoro ✨",
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Wishlist tab: dugme za dodavanje je uvijek fiksno na vrhu, a ispod
   /// njega je Expanded prostor koji je ili centrirana poruka (prazna
   /// lista, isto ponašanje kao Favorites) ili scrollabilna lista stavki.
@@ -836,8 +1074,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 child: (item.slika != null &&
                                         item.slika!.isNotEmpty)
                                     ? ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(10),
                                         child: Image.memory(
                                           base64Decode(item.slika!),
                                           fit: BoxFit.cover,
@@ -853,8 +1090,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item.naslov ?? "",
@@ -870,21 +1106,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color:
-                                            getPriorityColor(item.prioritet)
-                                                .withOpacity(0.12),
-                                        borderRadius:
-                                            BorderRadius.circular(30),
+                                        color: getPriorityColor(item.prioritet)
+                                            .withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: getPriorityColor(
-                                              item.prioritet),
+                                          color:
+                                              getPriorityColor(item.prioritet),
                                         ),
                                       ),
                                       child: Text(
                                         item.prioritet ?? "",
                                         style: TextStyle(
-                                          color: getPriorityColor(
-                                              item.prioritet),
+                                          color:
+                                              getPriorityColor(item.prioritet),
                                         ),
                                       ),
                                     ),
@@ -956,8 +1190,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const Text(
                     "Sazviježđe pročitanih knjiga",
                     textAlign: TextAlign.center,
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -1016,6 +1249,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 12),
       children: [
+        buildZnackeSummary(),
+        const SizedBox(height: 8),
         buildZnackeByNivo(),
       ],
     );
@@ -1024,6 +1259,23 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 109, 139, 116),
+        title: const Text("Profil"),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.35),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: logout,
+          ),
+        ],
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Container(
@@ -1031,22 +1283,38 @@ class _ProfileScreenState extends State<ProfileScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.center,
-                  colors: [Color(0xFF1B5E20), Colors.white],
+                  colors: [
+                    Color.fromARGB(255, 109, 139, 116),
+                    Color.fromARGB(255, 150, 170, 155),
+                    Color.fromARGB(255, 220, 230, 223),
+                    Colors.white,
+                  ],
                 ),
               ),
               child: SafeArea(
                 child: Column(
                   children: [
-                    const SizedBox(height: 25),
-                    const CircleAvatar(
+                    const SizedBox(height: 15),
+                    /*const CircleAvatar(
                       radius: 42,
                       backgroundColor: Colors.white,
                       child: Icon(Icons.person, size: 45, color: Colors.green),
+                    ),*/
+
+                    const SizedBox(height: 10),
+                    const CircleAvatar(
+                      radius: 42,
+                      backgroundColor: Color(0xFFFFF8E1),
+                      child: Icon(
+                        Icons.person,
+                        size: 45,
+                        color: Color(0xFF5D4037),
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      "MyBooks User",
-                      style: TextStyle(
+                    Text(
+                      Authorization.korisnik?.ime ?? "Čitalac",
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -1077,16 +1345,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                               unselectedLabelColor: Colors.grey,
                               indicatorColor: const Color(0xFF1B5E20),
                               tabs: const [
-                                Tab(icon: Icon(Icons.favorite), text: "Favorites"),
-                                Tab(icon: Icon(Icons.bookmark), text: "Wishlist"),
+                                Tab(
+                                    icon: Icon(Icons.favorite),
+                                    text: "Favorites"),
+                                Tab(
+                                    icon: Icon(Icons.bookmark),
+                                    text: "Wishlist"),
                                 Tab(
                                   icon: Icon(Icons.travel_explore),
                                   text: "Sazviježđe",
                                 ),
-                                Tab(icon: Icon(Icons.insights), text: "Statistika"),
+                                Tab(
+                                    icon: Icon(Icons.insights),
+                                    text: "Statistika"),
                                 Tab(
                                   icon: Icon(Icons.workspace_premium),
                                   text: "Značke",
+                                ),
+                                Tab(
+                                  icon: Icon(Icons.settings),
+                                  text: "Postavke",
                                 ),
                               ],
                             ),
@@ -1100,70 +1378,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   buildConstellationTab(),
                                   buildStatsTab(),
                                   buildBadgesTab(),
+                                  buildSettingsTab(),
                                 ],
                               ),
                             ),
                             const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.settings),
-                              title: const Text("Settings"),
-                              onTap: () {},
-                            ),
-                            ListTile(
-                              leading: const Icon(
-                                Icons.logout,
-                                color: Colors.red,
-                              ),
-                              title: const Text(
-                                "Odjava",
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              onTap: () async {
-                                final potvrda = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: const Text("Odjava"),
-                                      content: const Text(
-                                        "Da li ste sigurni da se želite odjaviti?",
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context, false);
-                                          },
-                                          child: const Text("Odustani"),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context, true);
-                                          },
-                                          child: const Text(
-                                            "Odjavi se",
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-
-                                if (potvrda == true) {
-                                  Authorization.korisnik = null;
-
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
-                              },
-                            ),
                           ],
                         ),
                       ),

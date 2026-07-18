@@ -15,5 +15,6 @@ namespace MyBooks.Model
         public string Tip { get; set; } = null!;
         public int Prag { get; set; }
         public int? Nivo { get; set; }
+        public int TrenutniNapredak { get; set; }   // novo
     }
 }
