@@ -1,34 +1,24 @@
 import 'package:flutter/material.dart';
-
 import 'package:mybooks_mobile/authorization.dart';
-
 import 'dart:convert';
-
 import 'package:mybooks_mobile/models/knjiga.dart';
-
 import 'package:mybooks_mobile/models/korisnik_znacka.dart';
-
 import 'package:mybooks_mobile/models/statistika.dart';
-
 import 'package:mybooks_mobile/models/znacka.dart';
-
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
-
 import 'package:mybooks_mobile/providers/statistika_provider.dart';
-
 import 'package:mybooks_mobile/models/wish_knjiga.dart';
-
 import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
-
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
-
 import 'package:mybooks_mobile/providers/znacke_provider.dart';
-
 import 'package:mybooks_mobile/screens/add_wish_screen.dart';
-
 import 'package:mybooks_mobile/screens/galaksija_screen.dart';
-
 import 'package:mybooks_mobile/screens/login_screen.dart';
+import 'package:mybooks_mobile/models/citat_statistika.dart';
+import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
+import 'package:mybooks_mobile/models/statistika.dart';
+import 'package:mybooks_mobile/providers/statistika_provider.dart';
+import 'package:mybooks_mobile/widgets/mood_ring_chart.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -49,10 +39,19 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   bool isLoading = true;
 
+  CitatStatistika? citatStatistika;
+
+  List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
+
   // Umjesto ExpansionTile sekcija koje su dijelile isti scroll (i pravile
   // probleme kod velikog broja stavki - wishlist, značke, statistika),
   // svaka sekcija je sada svoj tab sa NEZAVISNIM scrollom.
   late final TabController _tabController;
+
+  // Scroll kontroler za heatmap čitalačke aktivnosti - koristi se da mapa
+  // pri otvaranju automatski skrola do današnjeg dana.
+  final ScrollController _heatmapScrollController = ScrollController();
+  bool _heatmapScrolledToEnd = false;
 
   @override
   void initState() {
@@ -64,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _heatmapScrollController.dispose();
     super.dispose();
   }
 
@@ -94,6 +94,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       var statistikaResult =
           await statistikaProvider.getStatistika(Authorization.korisnik!.id);
 
+      // statistika citata (za heatmap čitalačke aktivnosti)
+      var citatStatistikaProvider = CitatStatistikaProvider();
+      var citatStatistikaResult = await citatStatistikaProvider
+          .getStatistika(Authorization.korisnik!.id);
+
       setState(() {
         wish = wishResult.result.reversed.toList();
         favorites = knjigaResult.result.where((k) => k.isFavorite).toList();
@@ -103,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         znacke = znackaResult.result;
         otkljucaneZnacke = znackaResult.result.map((x) => x.znackaId!).toList();
         statistika = statistikaResult;
+        citatStatistika = citatStatistikaResult;
         isLoading = false;
       });
     } catch (e) {
@@ -250,39 +256,82 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget buildZanrovskiDnk() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+    if (statistika == null ||
+        statistika!.zanrovskiDNK == null ||
+        statistika!.zanrovskiDNK!.isEmpty) {
+      return const SizedBox();
+    }
+
+    return buildStatCard(
+      title: "Žanrovski DNK",
+      emoji: "🧬",
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Žanrovski DNK 🧬",
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
-            ),
+        children: statistika!.zanrovskiDNK!.map((z) => buildDnkRow(z)).toList(),
+      ),
+    );
+  }
+
+  Widget buildMoodChart() {
+    if (statistika?.moodStatistika == null ||
+        statistika!.moodStatistika!.isEmpty) {
+      return const SizedBox();
+    }
+
+    return buildStatCard(
+      title: "Kako knjige utiču na tebe",
+      emoji: "💙",
+      child: MoodRingChart(
+        moods: statistika!.moodStatistika!,
+      ),
+    );
+  }
+
+  Widget buildStatCard({
+    required String title,
+    required Widget child,
+    String? emoji,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 8,
+      ),
+      child: Card(
+        elevation: 3,
+        shadowColor: Colors.black.withOpacity(0.08),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (emoji != null)
+                    Text(
+                      emoji,
+                      style: const TextStyle(
+                        fontSize: 20,
+                      ),
+                    ),
+                  if (emoji != null) const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF263238),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              child,
+            ],
           ),
-          if (statistika == null ||
-              statistika!.zanrovskiDNK == null ||
-              statistika!.zanrovskiDNK!.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                "Nema dovoljno podataka za statistiku 🧬",
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Column(
-                children: statistika!.zanrovskiDNK!
-                    .map((z) => buildDnkRow(z))
-                    .toList(),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -297,20 +346,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         .map((e) => e.broj ?? 0)
         .reduce((a, b) => a > b ? a : b);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+    return buildStatCard(
+      title: "Histogram ocjena",
+      emoji: "⭐",
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Histogram ocjena ⭐",
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
-            ),
-          ),
-          const SizedBox(height: 12),
           ...statistika!.histogramOcjena!.map((e) {
             double widthFactor = maxBroj == 0 ? 0 : (e.broj! / maxBroj);
 
@@ -323,7 +363,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Text(
                       "${e.ocjena}★",
                       style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -334,8 +376,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         value: widthFactor,
                         minHeight: 8,
                         backgroundColor: Colors.grey.shade200,
-                        valueColor:
-                            const AlwaysStoppedAnimation(Color(0xFF1B5E20)),
+                        valueColor: const AlwaysStoppedAnimation(
+                          Color(0xFF1B5E20),
+                        ),
                       ),
                     ),
                   ),
@@ -345,14 +388,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Text(
                       "${e.broj}",
                       textAlign: TextAlign.end,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -887,6 +932,177 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // ---------------------------------------------------------------------
+  // HEATMAP ČITALAČKE AKTIVNOSTI (premješteno iz HomeScreen)
+  // ---------------------------------------------------------------------
+
+  Map<String, int> get heatmapData {
+    final map = <String, int>{};
+
+    for (var item in citatiPoDanima) {
+      if (item.datum == null) continue;
+
+      final key = item.datum!.toIso8601String().split("T")[0];
+      final value = (item.broj ?? 0);
+      map[key] = (map[key] ?? 0) + value;
+    }
+
+    return map;
+  }
+
+  Color heatColor(int value) {
+    if (value == 0) return Colors.grey.shade200;
+    if (value == 1) return const Color(0xFF9BE9A8);
+    if (value == 2) return const Color(0xFF40C463);
+    if (value == 3) return const Color(0xFF30A14E);
+    return const Color(0xFF216E39);
+  }
+
+  List<DateTime> get last365Days {
+    final today = DateTime.now();
+    return List.generate(365, (i) {
+      return today.subtract(Duration(days: 364 - i));
+    });
+  }
+
+  Widget buildGitHubHeatmap() {
+    final days = last365Days;
+    final weeks = (days.length / 7).ceil();
+    final todayIndex = days.length - 1; // zadnji dan u listi je uvijek danas
+
+    const months = [
+      "",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Maj",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Dec"
+    ];
+
+    const double cellWidth = 14; // 10px ćelija + 2x2px margina po koloni
+
+    // Nakon prvog rendera, automatski skroluj tako da današnji dan bude
+    // vidljiv sa malo prostora s desne strane (umjesto da korisnik mora
+    // sam skrolati do kraja, ili da "danas" bude zalijepljeno za ivicu).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_heatmapScrolledToEnd && _heatmapScrollController.hasClients) {
+        final maxScroll = _heatmapScrollController.position.maxScrollExtent;
+        final viewportWidth =
+            _heatmapScrollController.position.viewportDimension;
+
+        final todayWeekOffset = (todayIndex ~/ 7) * cellWidth;
+
+        // ciljamo da današnja kolona bude vidljiva ~60% širine ekrana od
+        // lijeva, umjesto potpuno zalijepljena za desnu ivicu
+        final target =
+            (todayWeekOffset - viewportWidth * 0.6).clamp(0.0, maxScroll);
+
+        _heatmapScrollController.jumpTo(target);
+        _heatmapScrolledToEnd = true;
+      }
+    });
+
+    return SizedBox(
+      height: 170,
+      child: Scrollbar(
+        controller: _heatmapScrollController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        child: SingleChildScrollView(
+          controller: _heatmapScrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Nazivi mjeseci
+              Row(
+                children: List.generate(weeks, (weekIndex) {
+                  final firstIndex = weekIndex * 7;
+
+                  if (firstIndex >= days.length) {
+                    return const SizedBox(width: cellWidth);
+                  }
+
+                  final firstDay = days[firstIndex];
+
+                  return SizedBox(
+                    width: cellWidth,
+                    child: Text(
+                      firstDay.day <= 7 ? months[firstDay.month] : "",
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Heatmap
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(weeks, (weekIndex) {
+                  return Column(
+                    children: List.generate(7, (dayIndex) {
+                      final index = weekIndex * 7 + dayIndex;
+
+                      if (index >= days.length) {
+                        return const SizedBox(
+                          width: 10,
+                          height: 10,
+                        );
+                      }
+
+                      final date = days[index];
+                      final isToday = index == todayIndex;
+
+                      final key =
+                          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+                      final value = heatmapData[key] ?? 0;
+
+                      return Tooltip(
+                        message:
+                            "${date.day}.${date.month}.${date.year}\n$value citata",
+                        child: Container(
+                          margin: const EdgeInsets.all(2),
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: value == 0
+                                ? Colors.grey.shade200
+                                : heatColor(value),
+                            borderRadius: BorderRadius.circular(2),
+                            border: isToday
+                                ? Border.all(
+                                    color: const Color(0xFF1B5E20),
+                                    width: 1.5,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    }),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
   // TAB SADRŽAJI
   // Svaki tab je svoj ListView -> nezavisan scroll. "Sazviježđe" tab je
   // sad samo pregled/dugme koje otvara ConstellationScreen na punom ekranu
@@ -1241,6 +1457,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         buildZanrovskiDnk(),
         const SizedBox(height: 20),
         buildHistogramOcjena(),
+        const SizedBox(height: 20),
+        if (citatiPoDanima.isNotEmpty)
+          buildStatCard(
+            title: "Tvoja čitalačka aktivnost (365 dana)",
+            emoji: "🔥",
+            child: buildGitHubHeatmap(),
+          ),
+        const SizedBox(height: 20),
+        buildMoodChart(),
       ],
     );
   }
@@ -1295,12 +1520,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   children: [
                     const SizedBox(height: 15),
-                    /*const CircleAvatar(
-                      radius: 42,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, size: 45, color: Colors.green),
-                    ),*/
-
                     const SizedBox(height: 10),
                     const CircleAvatar(
                       radius: 42,

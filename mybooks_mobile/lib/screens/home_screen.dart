@@ -10,7 +10,6 @@ import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
 import 'package:mybooks_mobile/screens/add_citat_screen.dart';
-import 'package:mybooks_mobile/widgets/mood_ring_chart.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -162,7 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List get genres => statistika?.topZanrovi ?? [];
   List get authors => statistika?.topAutori ?? [];
   List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
-  List<MoodStatistika> get moods => statistika?.moodStatistika ?? [];
 
   Widget buildBooksChart() {
     if (booksPerMonth.isEmpty) return const SizedBox();
@@ -657,34 +655,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: 16),
                             //buildMonthLabels(),
                             //const SizedBox(height: 8),
-                            buildGitHubHeatmap(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (moods.isNotEmpty) ...[
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "💙 Kako su se knjige osjećajno odrazile na tebe",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            MoodRingChart(
-                              moods: moods,
-                            ),
+                           // buildGitHubHeatmap(),
                           ],
                         ),
                       ),
@@ -1130,7 +1101,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildHeatmap() {
+ /* Widget buildHeatmap() {
     if (citatiPoDanima.isEmpty) {
       return const Text("Nema podataka");
     }
@@ -1169,9 +1140,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }).toList(),
     );
-  }
+  }*/
 
-  Widget buildGitHubHeatmap() {
+  /*Widget buildGitHubHeatmap() {
     final days = last365Days;
     final weeks = (days.length / 7).ceil();
 
@@ -1269,7 +1240,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
+  }*/
 
   Widget buildTopAutori(List topAutori) {
     if (topAutori.isEmpty) return const SizedBox();

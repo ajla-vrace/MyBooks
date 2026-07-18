@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
+import 'package:mybooks_mobile/models/znacka.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
+import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/zanr_provider.dart';
+import 'package:mybooks_mobile/providers/znacke_provider.dart';
 import 'package:mybooks_mobile/screens/knjiga_detalji_screen.dart';
+import 'package:mybooks_mobile/widgets/achievement_dialog.dart';
 
 class KnjigeScreen extends StatefulWidget {
   const KnjigeScreen({super.key});
@@ -84,7 +88,7 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     }
   }
 
-  Future<void> toggleFavorite(Knjiga knjiga) async {
+  /*Future<void> toggleFavorite(Knjiga knjiga) async {
     bool newValue = !(knjiga.isFavorite ?? false);
 
     setState(() {
@@ -95,7 +99,105 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     await provider.update(knjiga.id!, {
       "isFavorite": newValue,
     });
-  }
+  }*/
+  Future<void> toggleFavorite(Knjiga knjiga) async {
+
+
+  bool newValue = !(knjiga.isFavorite ?? false);
+
+
+
+  // značke prije
+  var prije =
+      await KorisnikZnackaProvider().get(
+        filter:{
+          "idKorisnik":
+          Authorization.korisnik!.id
+        }
+      );
+
+
+  var prijeIds =
+      prije.result
+      .map((x)=>x.znackaId)
+      .toSet();
+
+
+
+  setState(() {
+    knjiga.isFavorite = newValue;
+  });
+
+
+
+  await KnjigaProvider().update(
+    knjiga.id!,
+    {
+      "isFavorite": newValue,
+    },
+  );
+
+
+
+  await Future.delayed(
+    const Duration(milliseconds:500),
+  );
+
+
+
+  // značke poslije
+  var poslije =
+      await KorisnikZnackaProvider().get(
+        filter:{
+          "idKorisnik":
+          Authorization.korisnik!.id
+        }
+      );
+
+
+
+  var poslijeIds =
+      poslije.result
+      .map((x)=>x.znackaId)
+      .toSet();
+
+
+
+  var noveIds =
+      poslijeIds.difference(prijeIds);
+
+
+
+  if(noveIds.isEmpty)
+    return;
+
+
+
+  var sve =
+      await ZnackaProvider().get();
+
+
+
+  List<Znacka> osvojene =
+      sve.result
+      .where(
+        (z)=>noveIds.contains(z.id)
+      )
+      .toList();
+
+
+
+  if(!mounted)
+    return;
+
+
+
+  AchievementDialog.show(
+    context,
+    osvojene,
+  );
+
+}
 
   Future<void> deleteKnjiga(Knjiga knjiga) async {
     var provider = KnjigaProvider();

@@ -114,19 +114,61 @@ namespace MyBooks.Service
         }
 
 
-        public override async Task<Model.Knjiga> Update(int id, KnjigaUpdateRequest update)
+        /* public override async Task<Model.Knjiga> Update(int id, KnjigaUpdateRequest update)
+         {
+             var entity = await _context.Knjigas.FindAsync(id);
+             if (entity == null)
+             {
+                 throw new KeyNotFoundException("Knjiga nije pronađen.");
+             }
+
+             _mapper.Map(update, entity);
+
+
+             _context.Knjigas.Update(entity);
+             await _context.SaveChangesAsync();
+
+             return _mapper.Map<Model.Knjiga>(entity);
+         }*/
+
+
+        public override async Task<Model.Knjiga> Update(
+    int id,
+    KnjigaUpdateRequest update)
         {
+
             var entity = await _context.Knjigas.FindAsync(id);
+
+
             if (entity == null)
             {
-                throw new KeyNotFoundException("Knjiga nije pronađen.");
+                throw new KeyNotFoundException(
+                    "Knjiga nije pronađen."
+                );
             }
 
+
+
             _mapper.Map(update, entity);
-           
+
+
 
             _context.Knjigas.Update(entity);
+
+
             await _context.SaveChangesAsync();
+
+
+
+            // ==========================
+            // PROVJERA ZNAČKI
+            // nakon update-a
+            // ==========================
+
+            await _korisnikZnackaService
+                .ProvjeriZnacke(entity.KorisnikId);
+
+
 
             return _mapper.Map<Model.Knjiga>(entity);
         }
