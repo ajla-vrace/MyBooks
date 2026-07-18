@@ -43,6 +43,23 @@ namespace MyBooks.Service
                 filteredQuery = filteredQuery.Where(x => x.IdKnjigaNavigation.KorisnikId == search.KorisnikId);
             }
 
+            // SORTIRANJE
+            // vrijednosti moraju odgovarati onome što frontend šalje (CitatiScreen -> sortOptions)
+
+            if (search?.Sort == "najnoviji")
+            {
+                filteredQuery = filteredQuery
+                    .OrderByDescending(x => x.DatumKreiranja);
+            }
+
+            if (search?.Sort == "najstariji")
+            {
+                filteredQuery = filteredQuery
+                    .OrderBy(x => x.DatumKreiranja);
+            }
+
+          
+
             return filteredQuery;
         }
 

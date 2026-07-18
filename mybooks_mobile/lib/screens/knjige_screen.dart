@@ -28,7 +28,7 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
 
   List<Zanr> zanrovi = [];
   int? selectedZanrId;
-  String? selectedSort;
+  String? selectedSort = "najnovije"; // default sort
   Timer? _debounce;
 
   // opcije sortiranja — "value" ide backendu kao "Sort" filter parametar
@@ -357,8 +357,9 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                   style: TextStyle(
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
-                    color:
-                        isSelected ? const Color(0xFF6D8B74) : Colors.black87,
+                    color: isSelected
+                        ? const Color(0xFF6D8B74)
+                        : Colors.black87,
                   ),
                 ),
               ],

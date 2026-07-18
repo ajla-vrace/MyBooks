@@ -13,5 +13,6 @@ namespace MyBooks.Model.SearchObject
         //public int? BrojStranice { get; set; }
         public bool? JeOmiljeni { get; set; }
         public int? KorisnikId { get; set; }
+        public string? Sort { get; set; }
     }
 }

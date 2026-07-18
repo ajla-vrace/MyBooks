@@ -21,8 +21,16 @@ class _CitatiScreenState extends State<CitatiScreen> {
 
   bool isLoading = true;
   int? selectedBookId;
+  String? selectedSort = "najnoviji"; // default sort
 
   Citat? citatDana;
+
+  // opcije sortiranja — "value" ide backendu kao "Sort" filter parametar
+  // MORA se poklapati tačno sa vrijednostima u CitatService.AddFilter
+  final List<Map<String, String>> sortOptions = [
+    {"label": "Najnoviji prvo", "value": "najnoviji"},
+    {"label": "Najstariji prvo", "value": "najstariji"},
+  ];
 
   @override
   void initState() {
@@ -62,7 +70,7 @@ class _CitatiScreenState extends State<CitatiScreen> {
     try {
       var provider = CitatProvider();
 
-      // ⭐ SVI CITATI (za daily quote)
+      // ⭐ SVI CITATI (za daily quote) — bez sorta, uvijek isti redoslijed
       var allResult = await provider.get(
         filter: {"KorisnikId": Authorization.korisnik!.id},
       );
@@ -72,12 +80,19 @@ class _CitatiScreenState extends State<CitatiScreen> {
         filter: {
           "KorisnikId": Authorization.korisnik!.id,
           if (selectedBookId != null) "IdKnjiga": selectedBookId,
+          if (selectedSort != null) "Sort": selectedSort,
         },
       );
 
       setState(() {
         allCitati = allResult.result.reversed.toList();
-        citati = filteredResult.result.reversed.toList();
+
+        // .reversed samo kad nema eksplicitnog sorta — inače kvari
+        // poredak koji backend već vrati (najnovije/najstarije/omiljeni)
+        citati = selectedSort == null
+            ? filteredResult.result.reversed.toList()
+            : filteredResult.result;
+
         isLoading = false;
       });
 
@@ -277,6 +292,61 @@ class _CitatiScreenState extends State<CitatiScreen> {
     );
   }
 
+  Widget buildSortButton() {
+    return PopupMenuButton<String>(
+      tooltip: "Sortiraj",
+      icon: Icon(
+        Icons.sort_rounded,
+        color: selectedSort != null
+            ? const Color(0xFF6D8B74)
+            : Colors.grey.shade700,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      onSelected: (value) {
+        setState(() {
+          // klik na već odabranu opciju je poništava (nazad na default)
+          selectedSort = (selectedSort == value) ? null : value;
+        });
+        loadData();
+      },
+      itemBuilder: (context) {
+        return sortOptions.map((option) {
+          final isSelected = selectedSort == option["value"];
+
+          return PopupMenuItem<String>(
+            value: option["value"],
+            child: Row(
+              children: [
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  size: 18,
+                  color: isSelected
+                      ? const Color(0xFF6D8B74)
+                      : Colors.grey.shade400,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  option["label"]!,
+                  style: TextStyle(
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? const Color(0xFF6D8B74)
+                        : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     print("DROPDOWN LIST:");
@@ -304,31 +374,39 @@ class _CitatiScreenState extends State<CitatiScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                /// FILTER
+                /// FILTER + SORT
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: DropdownButton<int?>(
-                    value: selectedBookId,
-                    isExpanded: true,
-                    hint: const Text("Sve knjige"),
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text("Sve knjige"),
-                      ),
-                      ...knjige.map(
-                        (b) => DropdownMenuItem(
-                          value: b.id,
-                          child: Text(b.naslov ?? ""),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButton<int?>(
+                          value: selectedBookId,
+                          isExpanded: true,
+                          hint: const Text("Sve knjige"),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text("Sve knjige"),
+                            ),
+                            ...knjige.map(
+                              (b) => DropdownMenuItem(
+                                value: b.id,
+                                child: Text(b.naslov ?? ""),
+                              ),
+                            )
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedBookId = value;
+                            });
+                            loadData();
+                          },
                         ),
-                      )
+                      ),
+                      const SizedBox(width: 8),
+                      buildSortButton(),
                     ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedBookId = value;
-                      });
-                      loadData();
-                    },
                   ),
                 ),
 
