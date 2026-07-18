@@ -14,6 +14,7 @@ namespace MyBooks.Model.SearchObject
         public int? ZanrId { get; set; }
         public int? KorisnikId { get; set; }
         public bool? NaDanasnjiDan { get; set; }
+        public string? Sort { get; set; }
         //public string? Status { get; set; }
     }
 }

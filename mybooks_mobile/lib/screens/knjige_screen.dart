@@ -28,8 +28,17 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
 
   List<Zanr> zanrovi = [];
   int? selectedZanrId;
-
+  String? selectedSort;
   Timer? _debounce;
+
+  // opcije sortiranja — "value" ide backendu kao "Sort" filter parametar
+  // MORA se poklapati tačno sa vrijednostima u KnjigaService.AddFilter (najnovije / ocjena / az / za)
+  final List<Map<String, String>> sortOptions = [
+    {"label": "Najnovije prvo", "value": "najnovije"},
+    {"label": "Najviša ocjena", "value": "ocjena"},
+    {"label": "Naslov (A-Ž)", "value": "az"},
+    {"label": "Naslov (Ž-A)", "value": "za"},
+  ];
 
   @override
   void initState() {
@@ -74,13 +83,18 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
           "KorisnikId": Authorization.korisnik!.id,
           if (naslov != null && naslov.isNotEmpty) "Naslov": naslov,
           if (selectedZanrId != null) "ZanrId": selectedZanrId,
+          if (selectedSort != null) "Sort": selectedSort,
         },
       );
 
       if (!mounted) return;
 
       setState(() {
-        knjige = result.result.reversed.toList();
+        // .reversed ima smisla samo kao "najnovije prvo" fallback kad nema
+        // eksplicitno odabranog sorta — inače pokvari sortove sa backenda (az/za/ocjena)
+        knjige = selectedSort == null
+            ? result.result.reversed.toList()
+            : result.result;
         isLoading = false;
       });
     } catch (e) {
@@ -101,103 +115,51 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     });
   }*/
   Future<void> toggleFavorite(Knjiga knjiga) async {
+    bool newValue = !(knjiga.isFavorite ?? false);
 
+    // značke prije
+    var prije = await KorisnikZnackaProvider()
+        .get(filter: {"idKorisnik": Authorization.korisnik!.id});
 
-  bool newValue = !(knjiga.isFavorite ?? false);
+    var prijeIds = prije.result.map((x) => x.znackaId).toSet();
 
+    setState(() {
+      knjiga.isFavorite = newValue;
+    });
 
+    await KnjigaProvider().update(
+      knjiga.id!,
+      {
+        "isFavorite": newValue,
+      },
+    );
 
-  // značke prije
-  var prije =
-      await KorisnikZnackaProvider().get(
-        filter:{
-          "idKorisnik":
-          Authorization.korisnik!.id
-        }
-      );
+    await Future.delayed(
+      const Duration(milliseconds: 500),
+    );
 
+    // značke poslije
+    var poslije = await KorisnikZnackaProvider()
+        .get(filter: {"idKorisnik": Authorization.korisnik!.id});
 
-  var prijeIds =
-      prije.result
-      .map((x)=>x.znackaId)
-      .toSet();
+    var poslijeIds = poslije.result.map((x) => x.znackaId).toSet();
 
+    var noveIds = poslijeIds.difference(prijeIds);
 
+    if (noveIds.isEmpty) return;
 
-  setState(() {
-    knjiga.isFavorite = newValue;
-  });
+    var sve = await ZnackaProvider().get();
 
+    List<Znacka> osvojene =
+        sve.result.where((z) => noveIds.contains(z.id)).toList();
 
+    if (!mounted) return;
 
-  await KnjigaProvider().update(
-    knjiga.id!,
-    {
-      "isFavorite": newValue,
-    },
-  );
-
-
-
-  await Future.delayed(
-    const Duration(milliseconds:500),
-  );
-
-
-
-  // značke poslije
-  var poslije =
-      await KorisnikZnackaProvider().get(
-        filter:{
-          "idKorisnik":
-          Authorization.korisnik!.id
-        }
-      );
-
-
-
-  var poslijeIds =
-      poslije.result
-      .map((x)=>x.znackaId)
-      .toSet();
-
-
-
-  var noveIds =
-      poslijeIds.difference(prijeIds);
-
-
-
-  if(noveIds.isEmpty)
-    return;
-
-
-
-  var sve =
-      await ZnackaProvider().get();
-
-
-
-  List<Znacka> osvojene =
-      sve.result
-      .where(
-        (z)=>noveIds.contains(z.id)
-      )
-      .toList();
-
-
-
-  if(!mounted)
-    return;
-
-
-
-  AchievementDialog.show(
-    context,
-    osvojene,
-  );
-
-}
+    AchievementDialog.show(
+      context,
+      osvojene,
+    );
+  }
 
   Future<void> deleteKnjiga(Knjiga knjiga) async {
     var provider = KnjigaProvider();
@@ -353,6 +315,60 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     );
   }
 
+  Widget buildSortButton() {
+    return PopupMenuButton<String>(
+      tooltip: "Sortiraj",
+      icon: Icon(
+        Icons.sort_rounded,
+        color: selectedSort != null
+            ? const Color(0xFF6D8B74)
+            : Colors.grey.shade700,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      onSelected: (value) {
+        setState(() {
+          // klik na već odabranu opciju je poništava (nazad na default)
+          selectedSort = (selectedSort == value) ? null : value;
+        });
+        loadData(naslov: searchController.text);
+      },
+      itemBuilder: (context) {
+        return sortOptions.map((option) {
+          final isSelected = selectedSort == option["value"];
+
+          return PopupMenuItem<String>(
+            value: option["value"],
+            child: Row(
+              children: [
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  size: 18,
+                  color: isSelected
+                      ? const Color(0xFF6D8B74)
+                      : Colors.grey.shade400,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  option["label"]!,
+                  style: TextStyle(
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color:
+                        isSelected ? const Color(0xFF6D8B74) : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -366,33 +382,53 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // 🔍 SEARCH (UI ONLY)
+                // 🔍 SEARCH + SORT
                 Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: (value) {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) {
+                              if (_debounce?.isActive ?? false) {
+                                _debounce!.cancel();
+                              }
 
-                        _debounce =
-                            Timer(const Duration(milliseconds: 400), () {
-                          loadData(naslov: value);
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        icon: Icon(Icons.search),
-                        hintText: "Pretraga po naslovu...",
-                        border: InputBorder.none,
+                              _debounce = Timer(
+                                const Duration(milliseconds: 400),
+                                () {
+                                  loadData(naslov: value);
+                                },
+                              );
+                            },
+                            decoration: const InputDecoration(
+                              icon: Icon(Icons.search),
+                              hintText: "Pretraga po naslovu...",
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: buildSortButton(),
+                      ),
+                    ],
                   ),
                 ),
+
+                const SizedBox(height: 12),
 
                 SizedBox(
                   height: 45,

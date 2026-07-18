@@ -65,6 +65,40 @@ namespace MyBooks.Service
                 );
             }
 
+
+            // SORTIRANJE
+
+            if (search?.Sort == "najnovije")
+            {
+                filteredQuery =
+                    filteredQuery
+                    .OrderByDescending(x => x.DatumKreiranja);
+            }
+
+
+            if (search?.Sort == "ocjena")
+            {
+                filteredQuery =
+                    filteredQuery
+                    .OrderByDescending(x => x.Ocjena);
+            }
+
+
+            if (search?.Sort == "az")
+            {
+                filteredQuery =
+                    filteredQuery
+                    .OrderBy(x => x.Naslov);
+            }
+
+
+            if (search?.Sort == "za")
+            {
+                filteredQuery =
+                    filteredQuery
+                    .OrderByDescending(x => x.Naslov);
+            }
+
             // Ako je korisničko ime i naziv usluge uneseno
 
 
