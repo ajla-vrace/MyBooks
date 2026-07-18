@@ -18,7 +18,8 @@ namespace MyBooks.Service
     .ForMember(dest => dest.Zanrovi,
         opt => opt.MapFrom(src =>
             src.KnjigaZanrs.Select(x => x.IdZanrNavigation)
-        ));
+        ))
+     ;
             CreateMap<Model.Requests.KnjigaInsertRequest, Database.Knjiga>();
             CreateMap<Model.Requests.KnjigaUpdateRequest, Database.Knjiga>();
 

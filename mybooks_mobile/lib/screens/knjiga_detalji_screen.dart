@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
+import 'package:mybooks_mobile/data/moods.dart';
 
 class KnjigaDetaljiScreen extends StatefulWidget {
   final Knjiga knjiga;
@@ -15,7 +16,30 @@ class KnjigaDetaljiScreen extends StatefulWidget {
   State<KnjigaDetaljiScreen> createState() => _KnjigaDetaljiScreenState();
 }
 
-class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen> {
+class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
+    with SingleTickerProviderStateMixin {
+  static const Color primary = Color(0xFF6D8B74);
+  static const Color primaryDark = Color(0xFF4E6B54);
+
+  late AnimationController _heartController;
+
+  @override
+  void initState() {
+    super.initState();
+    _heartController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+      lowerBound: 0.8,
+      upperBound: 1.15,
+    )..value = 1.0;
+  }
+
+  @override
+  void dispose() {
+    _heartController.dispose();
+    super.dispose();
+  }
+
   Future<void> toggleFavorite() async {
     bool newValue = !(widget.knjiga.isFavorite ?? false);
 
@@ -23,9 +47,13 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen> {
       widget.knjiga.isFavorite = newValue;
     });
 
+    _heartController.forward(from: 0.8).then((_) {
+      _heartController.animateTo(1.0,
+          duration: const Duration(milliseconds: 150), curve: Curves.easeOut);
+    });
+
     try {
       var provider = KnjigaProvider();
-
       await provider.update(widget.knjiga.id!, {
         "isFavorite": newValue,
       });
@@ -36,282 +64,403 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen> {
     }
   }
 
-  Widget buildStars(int rating) {
+  Widget buildStars(num rating, {double size = 20}) {
     return Row(
-      children: List.generate(
-        5,
-        (index) => Icon(
-          index < rating ? Icons.star : Icons.star_border,
-          color: Colors.amber,
-          size: 20,
-        ),
-      ),
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        IconData icon;
+        if (index < rating.floor()) {
+          icon = Icons.star_rounded;
+        } else if (index < rating) {
+          icon = Icons.star_half_rounded;
+        } else {
+          icon = Icons.star_border_rounded;
+        }
+        return Icon(icon, color: const Color(0xFFFFB74D), size: size);
+      }),
     );
+  }
+
+  /// Pronalazi mood mapu na osnovu teksta spremljenog u knjizi.
+  Map<String, String>? get _matchedMood {
+    final moodText = widget.knjiga.mood;
+    if (moodText == null || moodText.isEmpty) return null;
+    try {
+      return moods.firstWhere((m) => m["text"] == moodText);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final knjiga = widget.knjiga;
+    final isFav = knjiga.isFavorite ?? false;
+    final mood = _matchedMood;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(widget.knjiga.naslov ?? "Detalji knjige"),
-        backgroundColor: const Color(0xFF6D8B74),
+        title: const Text("Knjiga detalji"),
+        backgroundColor: primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 280,
-              decoration: const BoxDecoration(
-                color: Color(0xFF6D8B74),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  margin: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 5),
+      body: CustomScrollView(
+        slivers: [
+          // ===== GRADIENT HEADER =====
+          SliverToBoxAdapter(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [primary, primaryDark],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(36),
+                      bottomRight: Radius.circular(36),
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: -30,
+                        right: -30,
+                        child: Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.06),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 60,
+                        left: -40,
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.05),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: (widget.knjiga.slika != null &&
-                            widget.knjiga.slika!.isNotEmpty)
-                        ? Image.memory(
-                            base64Decode(widget.knjiga.slika!),
-                            height: 220,
-                            width: 160,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            height: 220,
-                            width: 160,
-                            color: Colors.white,
-                            child: const Icon(
-                              Icons.menu_book,
-                              size: 70,
-                              color: Colors.grey,
+                ),
+
+                // ❤️ FAVORITE — gornji desni ugao, ispod app bara
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: ScaleTransition(
+                    scale: _heartController,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.18),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: toggleFavorite,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFav ? Colors.redAccent : Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ===== FLOATING COVER =====
+                Positioned(
+                  top: 20,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Hero(
+                      tag: 'knjiga-slika-${knjiga.id}',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: (knjiga.slika != null &&
+                                  knjiga.slika!.isNotEmpty)
+                              ? Image.memory(
+                                  base64Decode(knjiga.slika!),
+                                  height: 190,
+                                  width: 136,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  height: 190,
+                                  width: 136,
+                                  color: Colors.white,
+                                  child: const Icon(
+                                    Icons.menu_book_rounded,
+                                    size: 55,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ===== CONTENT =====
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 108, 20, 30),
+              child: Column(
+                children: [
+                  Text(
+                    knjiga.naslov ?? "",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF25322A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    knjiga.autor ?? "",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      buildStars(knjiga.ocjena ?? 0),
+                      const SizedBox(width: 8),
+                      Text(
+                        "${(knjiga.ocjena ?? 0).toStringAsFixed(1)}/5",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // ===== MOOD =====
+                  if (mood != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(mood["emoji"]!,
+                              style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            mood["text"]!,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: primaryDark,
                             ),
                           ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// TITLE + FAVORITE
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.knjiga.naslov ?? "",
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: toggleFavorite,
-                        icon: Icon(
-                          widget.knjiga.isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: Colors.red,
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  /// AUTHOR
-                  Text(
-                    widget.knjiga.autor ?? "",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  Row(
-                    children: [
-                      buildStars(widget.knjiga.ocjena ?? 0),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: toggleFavorite,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          /*child: Icon(
-                            widget.knjiga.isFavorite == true
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            key: ValueKey(widget.knjiga.isFavorite),
-                            color: Colors.red,
-                            size: 30,
-                          ),*/
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  /// =========================
-                  /// 🏷 ŽANROVI
-                  /// =========================
-                  if (widget.knjiga.zanrovi != null &&
-                      widget.knjiga.zanrovi!.isNotEmpty) ...[
-                    const Text(
-                      "Žanr",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                  ],
+
+                  const SizedBox(height: 22),
+
+                  // ===== ŽANROVI =====
+                  if (knjiga.zanrovi != null && knjiga.zanrovi!.isNotEmpty)
                     Wrap(
+                      alignment: WrapAlignment.center,
                       spacing: 8,
                       runSpacing: 8,
-                      children: widget.knjiga.zanrovi!.map((z) {
+                      children: knjiga.zanrovi!.map((z) {
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
+                              horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6D8B74).withOpacity(.12),
+                            gradient: LinearGradient(
+                              colors: [
+                                primary.withOpacity(.15),
+                                primary.withOpacity(.05),
+                              ],
+                            ),
                             borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: const Color(0xFF6D8B74),
-                            ),
+                            border: Border.all(color: primary.withOpacity(.4)),
                           ),
-                          child: Text(
-                            z.naziv ?? "",
-                            style: const TextStyle(
-                              color: Color(0xFF6D8B74),
-                              fontWeight: FontWeight.w500,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_offer_rounded,
+                                  size: 14, color: primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                z.naziv ?? "",
+                                style: const TextStyle(
+                                  color: primaryDark,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 22),
-                  ],
 
-                  /// =========================
-                  /// 📖 OPIS
-                  /// =========================
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.menu_book_rounded,
-                        color: Color(0xFF6D8B74),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        "Opis",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 28),
 
-                  const SizedBox(height: 10),
-
-                  Text(
-                    widget.knjiga.opis?.isNotEmpty == true
-                        ? widget.knjiga.opis!
-                        : "Nije unesen opis knjige.",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.6,
-                      color: Colors.black87,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  /// =========================
-                  /// 📝 RECENZIJA
-                  /// =========================
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.rate_review_rounded,
-                        color: Color(0xFF6D8B74),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        "Recenzija",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                  // ===== OPIS =====
+                  _sectionCard(
+                    icon: Icons.menu_book_rounded,
+                    title: "Opis",
                     child: Text(
-                      widget.knjiga.recenzija?.isNotEmpty == true
-                          ? widget.knjiga.recenzija!
-                          : "Recenzija nije unesena.",
+                      knjiga.opis?.isNotEmpty == true
+                          ? knjiga.opis!
+                          : "Nije unesen opis knjige.",
                       style: const TextStyle(
                         fontSize: 15,
                         height: 1.6,
-                        fontStyle: FontStyle.italic,
                         color: Colors.black87,
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // ===== RECENZIJA =====
+                  _sectionCard(
+                    icon: Icons.rate_review_rounded,
+                    title: "Recenzija",
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -10,
+                          right: -6,
+                          child: Icon(
+                            Icons.format_quote_rounded,
+                            size: 60,
+                            color: primary.withOpacity(.08),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            knjiga.recenzija?.isNotEmpty == true
+                                ? knjiga.recenzija!
+                                : "Recenzija nije unesena.",
+                            style: const TextStyle(
+                              fontSize: 15,
+                              height: 1.6,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionCard({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primary.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF25322A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }

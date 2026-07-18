@@ -43,9 +43,16 @@ namespace MyBooks.Service
                 filteredQuery = filteredQuery.Where(x => x.KorisnikId == search.KorisnikId);
             }
 
+            /* filteredQuery = filteredQuery
+    .Include(x => x.KnjigaZanrs)
+        .ThenInclude(x => x.IdZanrNavigation);*/
+
             filteredQuery = filteredQuery
-   .Include(x => x.KnjigaZanrs)
-       .ThenInclude(x => x.IdZanrNavigation);
+      .Include(x => x.KnjigaZanrs)
+          .ThenInclude(x => x.IdZanrNavigation);
+     // .Include(x => x.Citats);   // <-- DODANO
+
+
             if (search?.ZanrId != null)
             {
                 int zanrId = search.ZanrId.Value;
