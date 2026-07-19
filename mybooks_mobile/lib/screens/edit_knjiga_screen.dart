@@ -24,6 +24,9 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
   static const Color primary = Color(0xFF6D8B74);
   static const Color primaryDark = Color(0xFF4E6B54);
 
+  // maksimalan broj žanrova koje korisnik može odabrati
+  static const int maxZanrova = 3;
+
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _naslovController;
@@ -41,12 +44,12 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
   bool _slikaUklonjena = false;
 
   // žanrovi — učitavaju se sa servera (svi dostupni), a odabrani su oni
-  // koje knjiga već ima
+  // koje knjiga već ima. Obavezno je odabrati bar jedan, a najviše maxZanrova.
   List<Zanr> _sveZanrovi = [];
   final Set<int> _selectedZanrIds = {};
   bool _loadingZanrovi = true;
 
-  // mood — jednostruki odabir iz statične liste u data/moods.dart
+  // mood — jednostruki odabir iz statične liste u data/moods.dart, obavezan
   String? _selectedMood;
 
   bool _isSaving = false;
@@ -148,6 +151,22 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
       return;
     }
 
+    if (_selectedZanrIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Molimo odaberite bar jedan žanr (maksimalno $maxZanrova)."),
+        ),
+      );
+      return;
+    }
+
+    if (_selectedMood == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Molimo odaberite raspoloženje uz knjigu.")),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -229,6 +248,15 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
               if (isSelected) {
                 _selectedZanrIds.remove(zanr.id);
               } else {
+                if (_selectedZanrIds.length >= maxZanrova) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                          Text("Možete odabrati najviše $maxZanrova žanra."),
+                    ),
+                  );
+                  return;
+                }
                 _selectedZanrIds.add(zanr.id!);
               }
             });
@@ -267,8 +295,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
         return GestureDetector(
           onTap: () {
             setState(() {
-              // klik na već odabrani mood ga poništava
-              _selectedMood = isSelected ? null : text;
+              // mood je obavezan, pa klik na već odabrani mood ga ne poništava
+              _selectedMood = text;
             });
           },
           child: Container(
@@ -408,10 +436,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
           return GestureDetector(
             onTap: () {
               setState(() {
-                // klik na već odabranu zvjezdicu ponovo je poništava na 0
-                _ocjena = (_ocjena == zvjezdica.toDouble())
-                    ? 0
-                    : zvjezdica.toDouble();
+                // ocjena je obavezna, pa klik na već odabranu zvjezdicu je ne poništava
+                _ocjena = zvjezdica.toDouble();
               });
             },
             child: Padding(
@@ -512,10 +538,10 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                 },
               ),
 
-              _label("Žanrovi"),
+              _label("Žanrovi * (max $maxZanrova)"),
               buildZanroviPicker(),
 
-              _label("Raspoloženje uz knjigu"),
+              _label("Raspoloženje uz knjigu *"),
               buildMoodPicker(),
 
               const SizedBox(height: 8),
