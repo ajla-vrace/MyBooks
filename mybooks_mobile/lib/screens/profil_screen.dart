@@ -11,8 +11,11 @@ import 'package:mybooks_mobile/models/wish_knjiga.dart';
 import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
 import 'package:mybooks_mobile/providers/znacke_provider.dart';
+import 'package:mybooks_mobile/providers/korisnik_provider.dart';
 import 'package:mybooks_mobile/screens/add_wish_screen.dart';
 import 'package:mybooks_mobile/screens/galaksija_screen.dart';
+import 'package:mybooks_mobile/screens/knjiga_detalji_screen.dart';
+import 'package:mybooks_mobile/screens/knjiga_detalji_screen.dart';
 import 'package:mybooks_mobile/screens/login_screen.dart';
 import 'package:mybooks_mobile/models/citat_statistika.dart';
 import 'package:mybooks_mobile/providers/citatStatistika_provider.dart';
@@ -58,10 +61,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   final ScrollController _heatmapScrollController = ScrollController();
   bool _heatmapScrolledToEnd = false;
 
+  // Postavke - godišnji cilj čitanja
+  late final TextEditingController _godisnjiCiljController;
+  bool isSavingGoal = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
+    _godisnjiCiljController = TextEditingController(
+      text: Authorization.korisnik?.godisnjiCilj?.toString() ?? "",
+    );
     loadData();
   }
 
@@ -69,7 +79,49 @@ class _ProfileScreenState extends State<ProfileScreen>
   void dispose() {
     _tabController.dispose();
     _heatmapScrollController.dispose();
+    _godisnjiCiljController.dispose();
     super.dispose();
+  }
+
+  Future<void> saveGodisnjiCilj() async {
+    final unos = int.tryParse(_godisnjiCiljController.text.trim());
+
+    if (unos == null || unos <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Unesi ispravan broj knjiga (veći od 0).")),
+      );
+      return;
+    }
+
+    setState(() => isSavingGoal = true);
+
+    try {
+      var provider = KorisnikProvider();
+
+      await provider.update(Authorization.korisnik!.id, {
+        "godisnjiCilj": unos,
+      });
+
+      setState(() {
+        Authorization.korisnik!.godisnjiCilj = unos;
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Godišnji cilj je ažuriran 🎯")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Greška: $e")),
+      );
+    }
+
+    if (mounted) {
+      setState(() => isSavingGoal = false);
+    }
   }
 
   Future<void> loadData() async {
@@ -192,8 +244,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     try {
       var provider = KnjigaProvider();
 
-      await provider.update(knjiga.id!, {
+     /* await provider.update(knjiga.id!, {
         "isFavorite": false,
+      });*/
+        await provider.update(knjiga.id!, {
+        "naslov": knjiga.naslov,
+        "autor": knjiga.autor,
+        "opis": knjiga.opis,
+        "recenzija": knjiga.recenzija,
+        "ocjena": knjiga.ocjena,
+        "isFavorite": false,
+        "mood": knjiga.mood,
+        "zanroviIds": (knjiga.zanrovi ?? [])
+            .where((z) => z.id != null)
+            .map((z) => z.id!)
+            .toList(),
+        if (knjiga.slika != null) "slika": knjiga.slika,
       });
 
       setState(() {
@@ -1237,6 +1303,120 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  Widget buildFavoriteItem(Knjiga book) {
+    const boja = const Color(0xFF6D8B74);
+    final imaSliku = book.slika != null && book.slika!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => KnjigaDetaljiScreen(knjiga: book),
+          ),
+        );
+
+        await loadData();
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Accent traka - ista zelena boja na svim favorites karticama
+                Container(width: 5, color: boja),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Container(
+                    width: 55,
+                    height: 78,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: imaSliku
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.memory(
+                              base64Decode(book.slika!),
+                              fit: BoxFit.cover,
+                              width: 55,
+                              height: 78,
+                            ),
+                          )
+                        : Icon(
+                            Icons.menu_book_rounded,
+                            color: Colors.grey.shade400,
+                          ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 4,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          book.naslov ?? "",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          book.autor ?? "",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: IconButton(
+                    icon: const Icon(Icons.favorite, color: Colors.red),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.red.withOpacity(0.08),
+                      shape: const CircleBorder(),
+                    ),
+                    onPressed: () => removeFavorite(book),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget buildFavoritesTab() {
     if (favorites.isEmpty) {
       return const Center(
@@ -1250,18 +1430,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 12),
       itemCount: favorites.length,
-      itemBuilder: (context, index) {
-        final book = favorites[index];
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          padding: const EdgeInsets.all(12),
+      itemBuilder: (context, index) => buildFavoriteItem(favorites[index]),
+    );
+  }
+
+  Widget buildSettingsTab() {
+    final trenutniCilj = Authorization.korisnik?.godisnjiCilj;
+    final unosPromijenjen =
+        _godisnjiCiljController.text.trim() != (trenutniCilj?.toString() ?? "");
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF1B5E20).withOpacity(0.25),
-              width: 1.2,
-            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -1270,75 +1456,265 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 45,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1B5E20).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.menu_book,
-                  color: Color(0xFF1B5E20),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF1B5E20).withOpacity(0.1),
+                    ),
+                    child: const Center(
+                      child: Text("🎯", style: TextStyle(fontSize: 18)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      "Godišnji cilj čitanja",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                trenutniCilj != null
+                    ? "Trenutni cilj: $trenutniCilj knjiga ove godine"
+                    : "Cilj još nije postavljen",
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _godisnjiCiljController,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: "Broj knjiga",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF1B5E20)),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      book.naslov ?? "",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B5E20),
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      book.autor ?? "",
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
+                  ),
+                  onPressed: (isSavingGoal ||
+                          !unosPromijenjen ||
+                          _godisnjiCiljController.text.trim().isEmpty)
+                      ? null
+                      : saveGodisnjiCilj,
+                  child: isSavingGoal
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text("Spasi cilj"),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.favorite, color: Colors.red),
-                onPressed: () => removeFavorite(book),
               ),
             ],
           ),
-        );
-      },
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.settings, size: 44, color: Colors.grey.shade300),
+              const SizedBox(height: 10),
+              Text(
+                "Ostale postavke stižu uskoro ✨",
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget buildSettingsTab() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.settings,
-            size: 60,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            "⚙️ Postavke",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+  /// Jedna kartica wishlist stavke - accent traka u boji prioriteta,
+  /// swipe-to-delete (koji samo otvara potvrdni dialog) i lijepše
+  /// oblikovan chip za prioritet.
+  Widget buildWishItem(WishKnjiga item) {
+    final boja = getPriorityColor(item.prioritet);
+
+    return Dismissible(
+      key: ValueKey(item.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        confirmDelete(item);
+        // Ne dozvoljavamo Dismissible-u da sam ukloni widget - stvarno
+        // brisanje (i uklanjanje iz liste) se dešava kroz deleteWish()
+        // tek nakon što korisnik potvrdi u dialogu.
+        return false;
+      },
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.only(right: 24),
+        alignment: Alignment.centerRight,
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Accent traka u boji prioriteta - vizuelno skeniranje liste
+                Container(width: 5, color: boja),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Container(
+                    width: 55,
+                    height: 78,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: (item.slika != null && item.slika!.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.memory(
+                              base64Decode(item.slika!),
+                              fit: BoxFit.cover,
+                              width: 55,
+                              height: 78,
+                            ),
+                          )
+                        : Icon(
+                            Icons.menu_book_rounded,
+                            color: Colors.grey.shade400,
+                          ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 4,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item.naslov ?? "",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.autor ?? "",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: boja.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: boja,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                item.prioritet ?? "",
+                                style: TextStyle(
+                                  color: boja,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Dugme za brisanje u krugu, umjesto golog X ikona
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Colors.grey.shade400,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      shape: const CircleBorder(),
+                    ),
+                    onPressed: () => confirmDelete(item),
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            "Stiže uskoro ✨",
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1354,7 +1730,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               icon: const Icon(Icons.add),
               label: const Text("Dodaj wish knjigu"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1B5E20),
+                backgroundColor: const Color(0xFF6D8B74),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -1383,102 +1759,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: wish.map((item) {
-                    return Stack(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.grey.shade300),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 55,
-                                height: 78,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: Colors.grey.shade200,
-                                ),
-                                child: (item.slika != null &&
-                                        item.slika!.isNotEmpty)
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.memory(
-                                          base64Decode(item.slika!),
-                                          fit: BoxFit.cover,
-                                          width: 55,
-                                          height: 78,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.menu_book_rounded,
-                                        color: Colors.grey,
-                                      ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.naslov ?? "",
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(item.autor ?? ""),
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: getPriorityColor(item.prioritet)
-                                            .withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(
-                                          color:
-                                              getPriorityColor(item.prioritet),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        item.prioritet ?? "",
-                                        style: TextStyle(
-                                          color:
-                                              getPriorityColor(item.prioritet),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          top: 16,
-                          right: 20,
-                          child: GestureDetector(
-                            onTap: () => confirmDelete(item),
-                            child: const Icon(Icons.close),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+                  children: wish.map((item) => buildWishItem(item)).toList(),
                 ),
         ),
       ],
@@ -1671,7 +1952,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Icon(
                         Icons.person,
                         size: 45,
-                        color:  Color.fromARGB(255, 109, 139, 116),
+                        color: Color.fromARGB(255, 109, 139, 116),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1684,10 +1965,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Text(
+                    /*const Text(
                       "Reader 📚",
                       style: TextStyle(color: Colors.white70),
-                    ),
+                    ),*/
                     const SizedBox(height: 20),
                     Expanded(
                       child: Container(
@@ -1704,9 +1985,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                             TabBar(
                               controller: _tabController,
                               isScrollable: true,
-                              labelColor: const Color(0xFF1B5E20),
+                              labelColor: const Color(0xFF6D8B74),
                               unselectedLabelColor: Colors.grey,
-                              indicatorColor: const Color(0xFF1B5E20),
+                              indicatorColor: const Color(0xFF6D8B74),
                               tabs: const [
                                 Tab(
                                     icon: Icon(Icons.favorite),

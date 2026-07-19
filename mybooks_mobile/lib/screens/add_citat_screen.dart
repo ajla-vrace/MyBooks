@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
+import 'package:mybooks_mobile/models/citat.dart';
 
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/znacka.dart';
@@ -13,13 +14,19 @@ import 'package:mybooks_mobile/widgets/achievement_dialog.dart';
 //import 'package:confetti/confetti.dart';
 
 class AddCitatScreen extends StatefulWidget {
-  const AddCitatScreen({super.key});
+  final Citat? citat;
+
+  const AddCitatScreen({
+    super.key,
+    this.citat,
+  });
 
   @override
   State<AddCitatScreen> createState() => _AddCitatScreenState();
 }
 
 class _AddCitatScreenState extends State<AddCitatScreen> {
+  bool get isEdit => widget.citat != null;
   final _formKey = GlobalKey<FormState>();
 
   final tekstController = TextEditingController();
@@ -42,11 +49,14 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
   void initState() {
     super.initState();
 
-    /* confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );*/
-
     loadKnjige();
+
+    if (isEdit) {
+      tekstController.text = widget.citat!.tekstCitata ?? "";
+      stranicaController.text = widget.citat!.brojStranice?.toString() ?? "";
+
+      omiljeni = widget.citat!.jeOmiljeni ?? false;
+    }
 
     loadZnacke();
   }
@@ -59,11 +69,16 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
         },
       );
 
-      if (mounted) {
-        setState(() {
-          knjige = result.result;
-        });
-      }
+      setState(() {
+        knjige = result.result;
+
+        if (isEdit) {
+          selectedKnjiga = knjige.firstWhere(
+            (k) => k.id == widget.citat!.idKnjiga,
+            orElse: () => knjige.first,
+          );
+        }
+      });
     } catch (e) {
       print(e);
     }
@@ -93,91 +108,103 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
     });
 
     try {
-      // ==============================
-      // ZNAČKE PRIJE
-      // ==============================
+      if (isEdit) {
+        await CitatProvider().update(
+          widget.citat!.id!,
+          {
+            "idKnjiga": selectedKnjiga!.id,
+            "tekstCitata": tekstController.text.trim(),
+            "brojStranice": int.parse(stranicaController.text),
+            "jeOmiljeni": omiljeni,
+          },
+        );
+      } else {
+        // Osiguraj da su značke učitane prije nego što ih koristimo
+        // (loadZnacke() se poziva u initState() bez await, pa ako
+        // korisnik brzo klikne "Dodaj citat", sveZnacke može biti prazna)
+        if (sveZnacke.isEmpty) {
+          await loadZnacke();
+        }
 
-      var znackePrije = await KorisnikZnackaProvider().get(
-        filter: {
-          "idKorisnik": Authorization.korisnik!.id,
-        },
-      );
+        // ====== LOGIKA ZA ZNAČKE ======
 
-      var stareZnackeIds = znackePrije.result.map((x) => x.znackaId).toSet();
-
-      // ==============================
-      // DODAVANJE CITATA
-      // ==============================
-
-      await CitatProvider().insert({
-        "idKnjiga": selectedKnjiga!.id,
-        "tekstCitata": tekstController.text,
-        "brojStranice": int.parse(stranicaController.text),
-        "jeOmiljeni": omiljeni,
-        "korisnikId": Authorization.korisnik!.id,
-      });
-
-      // čekanje backend ProvjeriZnacke
-
-      await Future.delayed(
-        const Duration(milliseconds: 500),
-      );
-
-      // ==============================
-      // ZNAČKE POSLIJE
-      // ==============================
-
-      var znackePoslije = await KorisnikZnackaProvider().get(
-        filter: {
-          "idKorisnik": Authorization.korisnik!.id,
-        },
-      );
-
-      var noveZnackeIds = znackePoslije.result
-          .map((x) => x.znackaId)
-          .toSet()
-          .difference(stareZnackeIds);
-
-      // ==============================
-      // PRONAĐI OBJEKTE ZNAČKI
-      // ==============================
-
-      List<Znacka> osvojene = [];
-
-      for (var id in noveZnackeIds) {
-        var znacka = sveZnacke.firstWhere(
-          (x) => x.id == id,
+        var znackePrije = await KorisnikZnackaProvider().get(
+          filter: {
+            "idKorisnik": Authorization.korisnik!.id,
+          },
         );
 
-        osvojene.add(znacka);
-      }
+        var stareZnackeIds =
+            znackePrije.result.map((x) => x.znackaId).toSet();
 
-      // ==============================
-      // PRIKAŽI SVE ODJEDNOM
-      // ==============================
+        await CitatProvider().insert({
+          "idKnjiga": selectedKnjiga!.id,
+          "tekstCitata": tekstController.text.trim(),
+          "brojStranice": int.parse(stranicaController.text),
+          "jeOmiljeni": omiljeni,
+          "korisnikId": Authorization.korisnik!.id,
+        });
 
-      if (osvojene.isNotEmpty && mounted) {
-        await AchievementDialog.show(
-          context,
-          osvojene,
+        // Backend (CitatService.Insert) sinhrono await-uje
+        // ProvjeriZnacke prije vraćanja odgovora, pa dodatni
+        // delay ovdje nije potreban.
+        var znackePoslije = await KorisnikZnackaProvider().get(
+          filter: {
+            "idKorisnik": Authorization.korisnik!.id,
+          },
         );
+
+        var noveZnackeIds = znackePoslije.result
+            .map((x) => x.znackaId)
+            .toSet()
+            .difference(stareZnackeIds);
+
+        List<Znacka> osvojene = [];
+
+        for (var id in noveZnackeIds) {
+          Znacka? z;
+          try {
+            z = sveZnacke.firstWhere((x) => x.id == id);
+          } catch (_) {
+            // Značka nije pronađena u lokalno učitanoj listi
+            // (npr. lista još nije bila učitana) - preskoči je
+            // umjesto da sruši cijeli save().
+            z = null;
+          }
+
+          if (z != null) {
+            osvojene.add(z);
+          }
+        }
+
+        if (osvojene.isNotEmpty && mounted) {
+          await AchievementDialog.show(
+            context,
+            osvojene,
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Citat je uspješno dodan"),
+            ),
+          );
+        }
       }
 
       if (!mounted) return;
 
-      Navigator.pop(
-        context,
-        true,
-      );
-    } catch (e) {
-      String poruka = "Nevalidan unos. Provjeri podatke.";
+      Navigator.pop(context, true);
+    } catch (e, stack) {
+      print("GREŠKA U SAVE: $e");
+      print(stack);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.redAccent,
-          content: Text(poruka),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Greška pri spremanju citata: $e"),
+          ),
+        );
+      }
     }
 
     if (mounted) {
@@ -656,8 +683,8 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Dodaj citat",
+        title: Text(
+          isEdit ? "Uredi citat" : "Dodaj citat",
         ),
       ),
       body: Padding(
@@ -749,15 +776,14 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: loading ? null : save,
-                  child: loading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
-                      : const Text(
-                          "Spasi",
-                        ),
-                ),
+                    onPressed: loading ? null : save,
+                    child: loading
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : Text(
+                            isEdit ? "Sačuvaj izmjene" : "Dodaj citat",
+                          )),
               )
             ],
           ),

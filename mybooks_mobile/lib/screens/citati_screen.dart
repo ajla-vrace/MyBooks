@@ -72,7 +72,8 @@ class _CitatiScreenState extends State<CitatiScreen> {
 
       // ⭐ SVI CITATI (za daily quote) — bez sorta, uvijek isti redoslijed
       var allResult = await provider.get(
-        filter: {"KorisnikId": Authorization.korisnik!.id},
+        filter: {"KorisnikId": Authorization.korisnik!.id, },
+
       );
 
       // ⭐ FILTRIRANI CITATI (za listu)
@@ -80,17 +81,17 @@ class _CitatiScreenState extends State<CitatiScreen> {
         filter: {
           "KorisnikId": Authorization.korisnik!.id,
           if (selectedBookId != null) "IdKnjiga": selectedBookId,
-          if (selectedSort != null) "Sort": selectedSort,
+           "Sort": selectedSort ?? "najnoviji"
         },
       );
 
       setState(() {
-        allCitati = allResult.result.reversed.toList();
+        allCitati = allResult.result.toList();
 
         // .reversed samo kad nema eksplicitnog sorta — inače kvari
         // poredak koji backend već vrati (najnovije/najstarije/omiljeni)
         citati = selectedSort == null
-            ? filteredResult.result.reversed.toList()
+            ? filteredResult.result.toList()
             : filteredResult.result;
 
         isLoading = false;
@@ -128,7 +129,11 @@ class _CitatiScreenState extends State<CitatiScreen> {
     bool newValue = !(citat.jeOmiljeni ?? false);
 
     await provider.update(citat.id!, {
-      "jeOmiljeni": newValue,
+     // "jeOmiljeni": newValue,
+      "idKnjiga": citat.idKnjiga,
+            "tekstCitata": citat.tekstCitata,
+            "brojStranice": citat.brojStranice,
+            "jeOmiljeni": newValue,
     });
 
     setState(() {
@@ -280,11 +285,56 @@ class _CitatiScreenState extends State<CitatiScreen> {
             ),
           ),
           Positioned(
-            top: 6,
-            right: 6,
-            child: GestureDetector(
-              onTap: () => confirmDelete(citat),
-              child: const Icon(Icons.close, size: 18),
+            top: 4,
+            right: 4,
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == "edit") {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddCitatScreen(
+                        citat: citat,
+                      ),
+                    ),
+                  );
+
+                  if (result == true) {
+                    loadData();
+                  }
+                }
+
+                if (value == "delete") {
+                  confirmDelete(citat);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: "edit",
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      SizedBox(width: 8),
+                      Text("Uredi"),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: "delete",
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text("Obriši"),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -306,8 +356,7 @@ class _CitatiScreenState extends State<CitatiScreen> {
       ),
       onSelected: (value) {
         setState(() {
-          // klik na već odabranu opciju je poništava (nazad na default)
-          selectedSort = (selectedSort == value) ? null : value;
+          selectedSort = value;
         });
         loadData();
       },
@@ -334,9 +383,8 @@ class _CitatiScreenState extends State<CitatiScreen> {
                   style: TextStyle(
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected
-                        ? const Color(0xFF6D8B74)
-                        : Colors.black87,
+                    color:
+                        isSelected ? const Color(0xFF6D8B74) : Colors.black87,
                   ),
                 ),
               ],

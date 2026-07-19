@@ -26,6 +26,10 @@ class AddKnjigaScreen extends StatefulWidget {
 }
 
 class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
+  // maksimalan broj žanrova koje korisnik može odabrati
+  // (usklađeno sa EditKnjigaScreen)
+  static const int maxZanrova = 3;
+
   final _formKey = GlobalKey<FormState>();
 
   File? selectedImage;
@@ -66,9 +70,19 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
     loadZnacke();
 
+    // osvježavamo isFormValid (dugme "Spasi") svaki put kad korisnik nešto ukuca
+    naslovController.addListener(_onFormFieldChanged);
+    autorController.addListener(_onFormFieldChanged);
+    opisController.addListener(_onFormFieldChanged);
+    recenzijaController.addListener(_onFormFieldChanged);
+
     /*confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );*/
+  }
+
+  void _onFormFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> loadZnacke() async {
@@ -106,6 +120,11 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   @override
   void dispose() {
     // confettiController.dispose();
+
+    naslovController.removeListener(_onFormFieldChanged);
+    autorController.removeListener(_onFormFieldChanged);
+    opisController.removeListener(_onFormFieldChanged);
+    recenzijaController.removeListener(_onFormFieldChanged);
 
     naslovController.dispose();
 
@@ -147,11 +166,20 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
 
     if (selectedZanrovi.isEmpty) return;
 
+    if (selectedMood == null) return;
+
     setState(() {
       isLoading = true;
     });
 
     try {
+      // Osiguraj da su značke učitane prije nego što ih koristimo
+      // (loadZnacke() se poziva u initState() bez await, pa ako
+      // korisnik brzo popuni formu, sveZnacke može biti prazna)
+      if (sveZnacke.isEmpty) {
+        await loadZnacke();
+      }
+
       // ===============================
       // ZNAČKE PRIJE
       // ===============================
@@ -166,12 +194,12 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
       // ===============================
 
       await KnjigaProvider().insert({
-        "naslov": naslovController.text,
-        "autor": autorController.text,
-        "opis": opisController.text,
+        "naslov": naslovController.text.trim(),
+        "autor": autorController.text.trim(),
+        "opis": opisController.text.trim(),
         "ocjena": ocjena,
         "status": "U toku",
-        "recenzija": recenzijaController.text,
+        "recenzija": recenzijaController.text.trim(),
         "slikaBase64": base64Image,
         "zanroviIds": selectedZanrovi,
         "isFavorite": isFavorite,
@@ -179,9 +207,8 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         "korisnikId": Authorization.korisnik!.id
       });
 
-      // malo vremena backendu da završi ProvjeriZnacke
-
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Backend (KnjigaService.Insert) sinhrono await-uje ProvjeriZnacke
+      // prije vraćanja odgovora, pa dodatni delay ovdje nije potreban.
 
       // ===============================
       // ZNAČKE POSLIJE
@@ -197,8 +224,14 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
       var noveZnacke =
           sveZnacke.where((x) => osvojeneIds.contains(x.id)).toList();
 
-      if (noveZnacke.isNotEmpty) {
-        AchievementDialog.show(
+      // VAŽNO: mora se "await"-ovati AchievementDialog.show() da bi se
+      // reset forme / SnackBar / scroll animacija izvršili TEK nakon što
+      // se dijalog sa konfetama zaista zatvori. Bez await-a, rebuild
+      // pozadinskog ekrana (setState pri resetu forme) se dešavao dok je
+      // dijalog i njegov ConfettiWidget još bio aktivan iznad njega, što
+      // je izazivalo "ConfettiController used after being disposed".
+      if (noveZnacke.isNotEmpty && mounted) {
+        await AchievementDialog.show(
           context,
           noveZnacke,
         );
@@ -243,9 +276,11 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         curve: Curves.easeOut,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Greška: $e"),
-      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Greška: $e"),
+        ));
+      }
     }
 
     if (mounted) {
@@ -254,455 +289,6 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
       });
     }
   }
-
-  /* void showAchievementDialog(
-      List<Znacka> znacke
-  ){
-
-
-   // confettiController.play();
-
-
-
-    showDialog(
-
-      context: context,
-
-      barrierDismissible:false,
-
-
-      builder:(context){
-
-
-        return Stack(
-
-
-          alignment:
-          Alignment.topCenter,
-
-
-          children:[
-
-
-
-            AlertDialog(
-
-
-              shape:
-              RoundedRectangleBorder(
-
-                borderRadius:
-                BorderRadius.circular(25),
-
-              ),
-
-
-
-              title:
-
-
-              const Center(
-
-                child:
-
-                Text(
-
-                  "Nove značke otključane 🎉",
-
-                  textAlign:
-                  TextAlign.center,
-
-
-                  style:
-                  TextStyle(
-
-                    fontSize:21,
-
-                    fontWeight:
-                    FontWeight.bold,
-
-                  ),
-
-                ),
-
-              ),
-
-
-
-
-
-              content:
-
-
-
-              SizedBox(
-
-
-                width:
-                double.maxFinite,
-
-
-                child:
-
-
-                Column(
-
-
-                  mainAxisSize:
-                  MainAxisSize.min,
-
-
-
-                  children:
-
-
-
-                  znacke.map((znacka){
-
-
-                    return Container(
-
-
-                      margin:
-                      const EdgeInsets.only(
-                        bottom:15
-                      ),
-
-
-
-                      padding:
-                      const EdgeInsets.all(12),
-
-
-
-                      decoration:
-                      BoxDecoration(
-
-                        color:
-                        Colors.amber
-                        .withOpacity(0.08),
-
-
-                        borderRadius:
-                        BorderRadius.circular(15),
-
-
-                        border:
-                        Border.all(
-
-                          color:
-                          Colors.amber
-                          .withOpacity(0.4),
-
-                        ),
-
-                      ),
-
-
-
-
-                      child:
-
-
-
-                      Row(
-
-
-                        children:[
-
-
-
-                          Container(
-
-
-                            width:
-                            60,
-
-
-                            height:
-                            60,
-
-
-                            decoration:
-                            BoxDecoration(
-
-
-                              shape:
-                              BoxShape.circle,
-
-
-                              color:
-                              Colors.amber
-                              .withOpacity(0.15),
-
-
-                            ),
-
-
-
-                            child:
-
-
-                            Center(
-
-
-                              child:
-
-
-                              Text(
-
-                                znacka.ikonica ??
-                                "🏆",
-
-
-                                style:
-                                const TextStyle(
-
-                                  fontSize:35,
-
-                                ),
-
-                              ),
-
-
-                            ),
-
-
-
-                          ),
-
-
-
-
-
-                          const SizedBox(
-                            width:15
-                          ),
-
-
-
-
-                          Expanded(
-
-
-                            child:
-
-
-                            Column(
-
-
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-
-
-
-                              children:[
-
-
-
-                                Text(
-
-                                  znacka.naziv ??
-                                  "",
-
-
-                                  style:
-                                  const TextStyle(
-
-                                    fontSize:17,
-
-
-                                    fontWeight:
-                                    FontWeight.bold,
-
-                                  ),
-
-                                ),
-
-
-
-
-
-                                const SizedBox(
-                                  height:5
-                                ),
-
-
-
-
-                                Text(
-
-                                  znacka.opis ??
-                                  "",
-
-
-                                  style:
-                                  const TextStyle(
-
-                                    fontSize:14,
-
-                                  ),
-
-                                ),
-
-
-
-                              ],
-
-
-                            ),
-
-
-
-                          ),
-
-
-
-                        ],
-
-
-                      ),
-
-
-
-                    );
-
-
-
-                  }).toList(),
-
-
-
-                ),
-
-
-              ),
-
-
-
-
-
-              actions:[
-
-
-
-                Center(
-
-
-                  child:
-
-
-                  TextButton(
-
-
-                    onPressed:(){
-
-
-                      Navigator.pop(context);
-
-
-                    },
-
-
-                    child:
-
-
-                    const Text(
-
-                      "Nastavi čitati 📚",
-
-                      style:
-                      TextStyle(
-
-                        fontSize:16,
-
-                      ),
-
-                    ),
-
-
-                  ),
-
-
-                )
-
-
-
-              ],
-
-
-
-            ),
-
-
-
-
-
-
-
-            Positioned(
-
-
-              top:-100,
-
-
-
-              child:
-
-
-
-              /*ConfettiWidget(
-
-
-                confettiController:
-                confettiController,
-
-
-
-                blastDirectionality:
-                BlastDirectionality.explosive,
-
-
-
-                numberOfParticles:
-                100,
-
-
-
-                gravity:
-                0.15,
-
-
-
-                emissionFrequency:
-                0.05,
-
-
-
-              ),
-
-
-
-            ),
-
-
-
-
-          ],
-*/
-
-
-        );
-
-
-      },
-
-
-    );
-
-  }
-
-*/
 
   InputDecoration inputStyle(String label) {
     return InputDecoration(
@@ -719,12 +305,16 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
   }
 
   bool get isFormValid {
-    return naslovController.text.isNotEmpty &&
-        autorController.text.isNotEmpty &&
-        opisController.text.isNotEmpty &&
-        recenzijaController.text.isNotEmpty &&
+    return naslovController.text.trim().length >= 2 &&
+        autorController.text.trim().isNotEmpty &&
+        opisController.text.trim().isNotEmpty &&
+        opisController.text.trim().length <= 1000 &&
+        recenzijaController.text.trim().isNotEmpty &&
+        recenzijaController.text.trim().length <= 1000 &&
         ocjena > 0 &&
-        selectedZanrovi.isNotEmpty;
+        selectedZanrovi.isNotEmpty &&
+        selectedZanrovi.length <= maxZanrova &&
+        selectedMood != null;
   }
 
   Widget buildStars() {
@@ -780,6 +370,10 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
           return "Izaberi barem jedan žanr";
         }
 
+        if (value.length > maxZanrova) {
+          return "Možeš odabrati najviše $maxZanrova žanra";
+        }
+
         return null;
       },
       builder: (state) {
@@ -796,6 +390,17 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                   label: Text(z.naziv ?? ""),
                   selected: selected,
                   onSelected: (value) {
+                    if (value && selectedZanrovi.length >= maxZanrova) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Možeš odabrati najviše $maxZanrova žanra.",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
                     setState(() {
                       if (value) {
                         selectedZanrovi.add(z.id!);
@@ -806,6 +411,85 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                       state.didChange(selectedZanrovi);
                     });
                   },
+                );
+              }).toList(),
+            ),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  state.errorText!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              )
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildMood() {
+    return FormField<String>(
+      initialValue: selectedMood,
+      validator: (value) {
+        if (value == null) {
+          return "Izaberi raspoloženje";
+        }
+
+        return null;
+      },
+      builder: (state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: moods.map((mood) {
+                final selected = selectedMood == mood["text"];
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedMood = mood["text"];
+
+                      state.didChange(selectedMood);
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFF1B5E20).withOpacity(0.15)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFF1B5E20)
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          mood["emoji"]!,
+                          style: const TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(mood["text"]!)
+                      ],
+                    ),
+                  ),
                 );
               }).toList(),
             ),
@@ -837,6 +521,13 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
+          // Bez ovoga se validator poruke nikad ne prikazuju, jer se
+          // validate() poziva samo unutar save(), a save() se ne pokreće
+          // dok je dugme onemogućeno (forma nevalidna). Sa
+          // onUserInteraction, svako polje se validira čim ga korisnik
+          // dotakne/promijeni, pa se crvena poruka odmah pojavi ispod
+          // njega - bez da odmah po otvaranju ekrana sve bude crveno.
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -878,22 +569,52 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: naslovController,
-                decoration: inputStyle("Naslov"),
+                decoration: inputStyle("Naslov *"),
+                textCapitalization: TextCapitalization.sentences,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Naslov je obavezan.";
+                  }
+
+                  if (value.trim().length < 2) {
+                    return "Naslov treba imati min. 2 karaktera.";
+                  }
+
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: autorController,
-                decoration: inputStyle("Autor"),
+                decoration: inputStyle("Autor *"),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Autor je obavezan.";
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: opisController,
                 maxLines: 3,
-                decoration: inputStyle("Opis"),
+                maxLength: 1000,
+                decoration: inputStyle("Opis *"),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Opis je obavezan.";
+                  }
+
+                  if (value.trim().length > 1000) {
+                    return "Opis je predugačak (max 1000 karaktera).";
+                  }
+
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
               const Text(
-                "Ocjena",
+                "Ocjena *",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
@@ -903,12 +624,24 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               TextFormField(
                 controller: recenzijaController,
                 maxLines: 3,
-                decoration: inputStyle("Recenzija"),
+                maxLength: 1000,
+                decoration: inputStyle("Recenzija *"),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Recenzija je obavezna.";
+                  }
+
+                  if (value.trim().length > 1000) {
+                    return "Recenzija je predugačka (max 1000 karaktera).";
+                  }
+
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
-              const Text(
-                "Žanrovi",
-                style: TextStyle(
+              Text(
+                "Žanrovi * (max $maxZanrova)",
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -916,58 +649,13 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               buildZanrovi(),
               const SizedBox(height: 25),
               const Text(
-                "Kako si se osjećala?",
+                "Kako si se osjećala? *",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: moods.map((mood) {
-                  final selected = selectedMood == mood["text"];
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedMood = mood["text"];
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? const Color(0xFF1B5E20).withOpacity(0.15)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: selected
-                              ? const Color(0xFF1B5E20)
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            mood["emoji"]!,
-                            style: const TextStyle(
-                              fontSize: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(mood["text"]!)
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+              buildMood(),
               const SizedBox(height: 15),
               Row(
                 children: [
@@ -991,6 +679,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B5E20),
+                    disabledBackgroundColor: Colors.grey.shade300,
                     padding: const EdgeInsets.symmetric(
                       vertical: 14,
                     ),
@@ -1000,8 +689,13 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                   ),
                   onPressed: (isLoading || !isFormValid) ? null : save,
                   child: isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
                         )
                       : const Text("Spasi"),
                 ),

@@ -115,8 +115,23 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
 
     try {
       var provider = KnjigaProvider();
+
+      // Backend validira Naslov (i ostala obavezna polja) na svaki update
+      // zahtjev, pa moramo poslati cijeli payload knjige, a ne samo
+      // isFavorite — inače stiže greška tipa "Naslov je obavezan".
       await provider.update(knjiga.id!, {
+        "naslov": knjiga.naslov,
+        "autor": knjiga.autor,
+        "opis": knjiga.opis,
+        "recenzija": knjiga.recenzija,
+        "ocjena": knjiga.ocjena,
         "isFavorite": novaVrijednost,
+        "mood": knjiga.mood,
+        "zanroviIds": (knjiga.zanrovi ?? [])
+            .where((z) => z.id != null)
+            .map((z) => z.id!)
+            .toList(),
+        if (knjiga.slika != null) "slika": knjiga.slika,
       });
     } catch (e) {
       // ako update ne uspije, vraćamo staro stanje
@@ -160,8 +175,16 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                   ),
                 );
 
+                if (!mounted) return;
+
                 if (result == true) {
+                  // izmjena (edit) ili brisanje — treba ponovo dovući listu sa servera
                   loadData(naslov: searchController.text);
+                } else {
+                  // korisnik se samo vratio nazad (npr. nakon togglanja favorita
+                  // na detalj ekranu) — knjiga objekat je isti po referenci i već
+                  // mutiran, samo treba rebuildati karticu da se vidi promjena
+                  setState(() {});
                 }
               },
               child: IntrinsicHeight(

@@ -25,8 +25,29 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
   File? selectedImage;
   String? base64Image;
 
+  // Napomena nije obavezna - forma je validna kad su naslov, autor i
+  // prioritet popunjeni. Ovo se osvježava live dok korisnik kuca/bira.
+  bool get isFormValid =>
+      naslovController.text.trim().isNotEmpty &&
+      autorController.text.trim().isNotEmpty &&
+      prioritet != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // rebuild na svaku promjenu teksta da se dugme uživo omogući/onemogući
+    naslovController.addListener(_onFieldChanged);
+    autorController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    naslovController.removeListener(_onFieldChanged);
+    autorController.removeListener(_onFieldChanged);
     naslovController.dispose();
     autorController.dispose();
     napomenaController.dispose();
@@ -50,7 +71,7 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
   }
 
   Future<void> save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || !isFormValid) return;
 
     setState(() => isLoading = true);
 
@@ -58,9 +79,9 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
       var provider = WishKnjigaProvider();
 
       var request = {
-        "naslov": naslovController.text,
-        "autor": autorController.text,
-        "napomena": napomenaController.text,
+        "naslov": naslovController.text.trim(),
+        "autor": autorController.text.trim(),
+        "napomena": napomenaController.text.trim(),
         "prioritet": prioritet,
         "slikaBase64": base64Image, // 👈 DODANO
         "korisnikId": Authorization.korisnik!.id,
@@ -81,22 +102,29 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
       );
     }
 
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
   }
 
-  Widget input(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+  Widget input(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    bool required = true,
+  }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: required ? label : "$label (opciono)",
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      validator: (v) =>
-          v == null || v.isEmpty ? "Obavezno polje" : null,
+      validator: required
+          ? (v) => v == null || v.trim().isEmpty ? "Obavezno polje" : null
+          : null,
     );
   }
 
@@ -109,6 +137,7 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -153,7 +182,12 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
               input("Autor", autorController),
               const SizedBox(height: 12),
 
-              input("Napomena", napomenaController, maxLines: 3),
+              input(
+                "Napomena",
+                napomenaController,
+                maxLines: 3,
+                required: false,
+              ),
 
               const SizedBox(height: 15),
 
@@ -190,10 +224,18 @@ class _AddWishKnjigaScreenState extends State<AddWishKnjigaScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     backgroundColor: const Color(0xFF1B5E20),
+                    disabledBackgroundColor: Colors.grey.shade300,
                   ),
-                  onPressed: isLoading ? null : save,
+                  onPressed: (isLoading || !isFormValid) ? null : save,
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
                       : const Text("Spasi"),
                 ),
               ),

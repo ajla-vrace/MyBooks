@@ -199,12 +199,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 TextFormField(
                   controller: imeController,
                   decoration: decoration(
-                    label: "Ime i prezime",
+                    label: "Ime",
                     icon: Icons.person_outline,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return "Unesite ime i prezime";
+                      return "Unesite ime";
                     }
 
                     if (RegExp(r'[0-9]').hasMatch(value)) {

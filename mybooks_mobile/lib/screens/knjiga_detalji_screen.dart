@@ -56,8 +56,24 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
 
     try {
       var provider = KnjigaProvider();
-      await provider.update(widget.knjiga.id!, {
+      final knjiga = widget.knjiga;
+
+      // Backend validira Naslov (i ostala obavezna polja) na svaki update
+      // zahtjev, pa ovdje moramo poslati cijeli payload knjige, a ne samo
+      // isFavorite — inače stižu greške tipa "Naslov je obavezan".
+      await provider.update(knjiga.id!, {
+        "naslov": knjiga.naslov,
+        "autor": knjiga.autor,
+        "opis": knjiga.opis,
+        "recenzija": knjiga.recenzija,
+        "ocjena": knjiga.ocjena,
         "isFavorite": newValue,
+        "mood": knjiga.mood,
+        "zanroviIds": (knjiga.zanrovi ?? [])
+            .where((z) => z.id != null)
+            .map((z) => z.id!)
+            .toList(),
+        if (knjiga.slika != null) "slika": knjiga.slika,
       });
     } catch (e) {
       setState(() {

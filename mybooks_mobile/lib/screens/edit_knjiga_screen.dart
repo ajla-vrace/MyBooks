@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
@@ -76,7 +77,18 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
       }
     }
 
+    // osvježava dugme "Sačuvaj izmjene" (enable/disable) svaki put kad
+    // korisnik nešto ukuca, jer se to poredi sa originalnim vrijednostima
+    _naslovController.addListener(_onFieldChanged);
+    _autorController.addListener(_onFieldChanged);
+    _opisController.addListener(_onFieldChanged);
+    _recenzijaController.addListener(_onFieldChanged);
+
     loadZanrovi();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> loadZanrovi() async {
@@ -96,6 +108,11 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
 
   @override
   void dispose() {
+    _naslovController.removeListener(_onFieldChanged);
+    _autorController.removeListener(_onFieldChanged);
+    _opisController.removeListener(_onFieldChanged);
+    _recenzijaController.removeListener(_onFieldChanged);
+
     _naslovController.dispose();
     _autorController.dispose();
     _opisController.dispose();
@@ -141,12 +158,41 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
     });
   }
 
+  /// Provjerava da li je korisnik zaista nešto promijenio u odnosu na
+  /// originalnu knjigu. Ako nije, save() ne treba forsirati validaciju
+  /// (bitno za starije knjige unesene prije nego su žanr/mood/ocjena
+  /// postali obavezni — inače korisnik ne bi mogao izaći sa ekrana bez
+  /// da "popravi" podatke koje uopšte nije ni namjeravao mijenjati).
+  bool _hasChanges() {
+    final k = widget.knjiga;
+
+    if (_naslovController.text.trim() != (k.naslov ?? "").trim()) return true;
+    if (_autorController.text.trim() != (k.autor ?? "").trim()) return true;
+    if (_opisController.text.trim() != (k.opis ?? "").trim()) return true;
+    if (_recenzijaController.text.trim() != (k.recenzija ?? "").trim()) {
+      return true;
+    }
+    if (_ocjena.round() != (k.ocjena ?? 0)) return true;
+    if (_isFavorite != (k.isFavorite ?? false)) return true;
+    if (_selectedMood != k.mood) return true;
+
+    final originalZanrIds =
+        (k.zanrovi ?? []).where((z) => z.id != null).map((z) => z.id!).toSet();
+    if (!setEquals(_selectedZanrIds, originalZanrIds)) return true;
+
+    if (_slikaUklonjena) return true;
+    if (_slikaBase64 != k.slika) return true;
+
+    return false;
+  }
+
   Future<void> save() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_ocjena == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Molimo odaberite ocjenu (1-5 zvjezdica).")),
+        const SnackBar(
+            content: Text("Molimo odaberite ocjenu (1-5 zvjezdica).")),
       );
       return;
     }
@@ -154,7 +200,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
     if (_selectedZanrIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Molimo odaberite bar jedan žanr (maksimalno $maxZanrova)."),
+          content:
+              Text("Molimo odaberite bar jedan žanr (maksimalno $maxZanrova)."),
         ),
       );
       return;
@@ -162,7 +209,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
 
     if (_selectedMood == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Molimo odaberite raspoloženje uz knjigu.")),
+        const SnackBar(
+            content: Text("Molimo odaberite raspoloženje uz knjigu.")),
       );
       return;
     }
@@ -183,9 +231,10 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
         "zanroviIds": _selectedZanrIds.toList(),
         // ako je slika uklonjena šaljemo prazan string, ako je promijenjena
         // šaljemo novi base64, inače ne diramo postojeću vrijednost
-        if (_slikaUklonjena) "slika": ""
+        if (_slikaUklonjena)
+          "slikaBase64": ""
         else if (_slikaBase64 != null && _slikaBase64 != widget.knjiga.slika)
-          "slika": _slikaBase64,
+          "slikaBase64": _slikaBase64,
       };
 
       await provider.update(widget.knjiga.id!, payload);
@@ -239,7 +288,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
       spacing: 8,
       runSpacing: 8,
       children: _sveZanrovi.map((zanr) {
-        final isSelected = zanr.id != null && _selectedZanrIds.contains(zanr.id);
+        final isSelected =
+            zanr.id != null && _selectedZanrIds.contains(zanr.id);
 
         return GestureDetector(
           onTap: () {
@@ -318,7 +368,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   style: TextStyle(
                     color: isSelected ? primaryDark : Colors.black87,
                     fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -471,7 +522,6 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               buildSlikaPicker(),
-
               _label("Naslov *"),
               TextFormField(
                 controller: _naslovController,
@@ -487,7 +537,6 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   return null;
                 },
               ),
-
               _label("Autor *"),
               TextFormField(
                 controller: _autorController,
@@ -500,10 +549,8 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   return null;
                 },
               ),
-
               _label("Ocjena *"),
               buildOcjenaPicker(),
-
               _label("Opis *"),
               TextFormField(
                 controller: _opisController,
@@ -520,7 +567,6 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   return null;
                 },
               ),
-
               _label("Recenzija *"),
               TextFormField(
                 controller: _recenzijaController,
@@ -537,16 +583,14 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   return null;
                 },
               ),
-
               _label("Žanrovi * (max $maxZanrova)"),
               buildZanroviPicker(),
-
               _label("Raspoloženje uz knjigu *"),
               buildMoodPicker(),
-
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -560,7 +604,9 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   secondary: Icon(
-                    _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    _isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: _isFavorite ? Colors.redAccent : Colors.grey,
                   ),
                   value: _isFavorite,
@@ -569,13 +615,11 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   },
                 ),
               ),
-
               const SizedBox(height: 30),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : save,
+                  onPressed: (_isSaving || !_hasChanges()) ? null : save,
                   icon: _isSaving
                       ? const SizedBox(
                           width: 18,
@@ -590,6 +634,7 @@ class _EditKnjigaScreenState extends State<EditKnjigaScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryDark,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),

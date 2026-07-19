@@ -24,10 +24,19 @@ abstract class BaseProvider<T> with ChangeNotifier {
         defaultValue: "http://192.168.1.6:5031/");*/
     /* _baseUrl = const String.fromEnvironment("baseUrl",
     defaultValue: "https://localhost:7031/");*/
-    _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://localhost:7208/");
-    /* _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "https://10.0.2.2:7208/");*/ //za emulator
+      _baseUrl = const String.fromEnvironment("baseUrl",
+        defaultValue: "https://localhost:7208/"); //ovo radi za probu
+    /*  _baseUrl = const String.fromEnvironment("baseUrl",
+      defaultValue: "http://192.168.1.7:5208/",);*/
+   /* _baseUrl = const String.fromEnvironment(
+      "baseUrl",
+      defaultValue: "http://localhost:5208/",
+    );*/ //ne oov
+
+    /*    _baseUrl = const String.fromEnvironment("baseUrl",
+      defaultValue: "http://10.0.2.2:5208/",);*/
+
+    // defaultValue: "https://10.0.2.2:7208/"); //za emulator
     client.badCertificateCallback = (cert, host, port) => true;
     http = IOClient(client);
   }

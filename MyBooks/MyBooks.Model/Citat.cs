@@ -15,6 +15,7 @@ namespace MyBooks.Model
         public string? TekstCitata { get; set; }
         public int? BrojStranice { get; set; }
         public bool? JeOmiljeni { get; set; }
+        public DateTime? DatumKreiranja { get; set; }
         public Knjiga IdKnjigaNavigation { get; set; }
 
         //public DateTime? DatumKreiranja { get; set; }

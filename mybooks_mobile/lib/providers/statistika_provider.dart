@@ -10,7 +10,8 @@ class StatistikaProvider {
       const String.fromEnvironment(
         "baseUrl",
         defaultValue: "https://localhost:7208/",
-       // defaultValue: "http://10.0.2.2:5208/",  //za emualtor
+       // defaultValue: "http://192.168.1.7:5208/",  //za mobitel
+        //defaultValue: "http://10.0.2.2:5208/",  //za emualtor
       );
 
   HttpClient client = HttpClient();
