@@ -13,6 +13,7 @@ import 'package:mybooks_mobile/providers/statistika_provider.dart';
 import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
 import 'package:mybooks_mobile/screens/add_citat_screen.dart';
+import 'package:mybooks_mobile/screens/add_knjiga_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -180,6 +181,95 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     return found?["emoji"] ?? "📖";
+  }
+
+  // 🌱 Empty state — prikazuje se samo kad korisnik nema NIJEDNU knjigu.
+  // Poziva na akciju i vodi direktno na ekran za dodavanje prve knjige;
+  // nakon povratka radimo refresh da kartica nestane čim se knjiga doda.
+  Widget buildEmptyStateCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_stories_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Tvoja biblioteka je još prazna",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "Nemaš nijednu dodanu knjigu ni osvojenu značku. Dodaj svoju prvu knjigu i osvoji prvu značku — započni svoj čitalački put! 🏆",
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AddKnjigaScreen(),
+                  ),
+                ).then((_) {
+                  loadData(); // 🔥 refresh nakon dodavanja prve knjige
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text(
+                "Dodaj prvu knjigu",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF6D8B74),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget buildTodayMemoryCard() {
@@ -757,6 +847,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // 🌱 Empty state — samo kad korisnik nema NIJEDNU knjigu.
+                  // Poziva na akciju odmah ispod cilja čitanja.
+                  if (!imaKnjiga) ...[
+                    buildEmptyStateCard(),
+                    const SizedBox(height: 24),
+                  ],
                   /*buildDailyChallengeCard(),
                   const SizedBox(height: 24),*/
                   if (danasnjaKnjiga != null) ...[
@@ -1131,18 +1227,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 14,
               ),
             ),
-            // const SizedBox(height: 12),
-            /*Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                getPriorityIcon(randomBook!.prioritet),
-                const SizedBox(width: 6),
-                Text(
-                  randomBook!.prioritet ?? "-",
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),*/
             const SizedBox(height: 18),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

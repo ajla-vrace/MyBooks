@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:mybooks_mobile/authorization.dart';
+import 'package:mybooks_mobile/screens/my_home_page.dart';
+import 'package:mybooks_mobile/screens/tutorial_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mybooks_mobile/models/zanr.dart';
@@ -99,6 +102,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (!mounted) return;
 
       if (response != null) {
+        // 🔑 Automatska prijava — isti obrazac kao u LoginScreen.login(),
+        // samo što ovdje korisnika dobijamo direktno iz insert() odgovora,
+        // pa nema potrebe da ga ponovo tražimo login pozivom.
+        Authorization.korisnik = response;
+        print("NOVI KORISNIK ID: ${Authorization.korisnik?.id}");
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Registracija uspješna 🎉"),
@@ -106,7 +115,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         );
 
-        Navigator.pop(context);
+        // Nakon tutorijala ide direktno na MyHomePage jer je korisnik
+        // već ulogovan (Authorization.korisnik je setovan iznad).
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TutorialScreen(
+              nextScreen: MyHomePage(),
+            ),
+          ),
+        );
       }
     } catch (e) {
       String poruka = "Račun sa ovim emailom već postoji.";
@@ -136,42 +154,48 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        // 📏 manji appbar — nema potrebe za standardnom visinom kad nema naslova
+        toolbarHeight: 36,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(28),
+          // 📏 GLAVNA IZMJENA: top padding sa 28 na 4 — to je maknulo
+          // najveći "prazan" prostor koji si vidio iznad ikonice.
+          padding: const EdgeInsets.fromLTRB(28, 4, 28, 20),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(25),
+                  // 📏 header ikonica malo manja (25→18 padding, 70→56 size)
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6D8B74).withOpacity(.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.menu_book_rounded,
-                    size: 70,
+                    size: 56,
                     color: Color(0xFF6D8B74),
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 14),
                 const Text(
                   "Kreiraj račun 📚",
                   style: TextStyle(
-                    fontSize: 30,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   "Napravi svoju digitalnu biblioteku.",
                   style: TextStyle(
                     color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 35),
+                // 📏 razmak prije prvog polja: 35 → 22
+                const SizedBox(height: 22),
                 TextFormField(
                   controller: imeController,
                   decoration: decoration(
@@ -190,7 +214,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                // 📏 razmak između polja: 20 → 14 (samo malo smanjeno, ne previše)
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: emailController,
                   decoration: decoration(
@@ -209,7 +234,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: passwordController,
                   obscureText: !showPassword,
@@ -239,7 +264,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: confirmPasswordController,
                   obscureText: !showConfirmPassword,
@@ -271,7 +296,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: ciljController,
                   keyboardType: TextInputType.number,
@@ -291,7 +316,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<Zanr>(
                   value: selectedZanr,
                   decoration: decoration(
@@ -317,10 +342,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 35),
+                // 📏 razmak prije dugmeta: 35 → 22
+                const SizedBox(height: 22),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: loading ? null : register,
                     style: ElevatedButton.styleFrom(

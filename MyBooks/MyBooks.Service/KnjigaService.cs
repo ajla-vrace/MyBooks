@@ -68,7 +68,8 @@ namespace MyBooks.Service
                 filteredQuery = filteredQuery.Where(x =>
                     x.DatumKreiranja.HasValue &&
                     x.DatumKreiranja.Value.Month == danas.Month &&
-                    x.DatumKreiranja.Value.Day == danas.Day
+                    x.DatumKreiranja.Value.Day == danas.Day &&
+                    x.DatumKreiranja.Value.Year != danas.Year
                 );
             }
 
