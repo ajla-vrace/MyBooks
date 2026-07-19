@@ -4,13 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/models/zanr.dart';
-import 'package:mybooks_mobile/models/znacka.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
-import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
 import 'package:mybooks_mobile/providers/zanr_provider.dart';
-import 'package:mybooks_mobile/providers/znacke_provider.dart';
 import 'package:mybooks_mobile/screens/knjiga_detalji_screen.dart';
-import 'package:mybooks_mobile/widgets/achievement_dialog.dart';
 
 class KnjigeScreen extends StatefulWidget {
   const KnjigeScreen({super.key});
@@ -72,12 +68,6 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     try {
       var provider = KnjigaProvider();
 
-      /*var result = await provider.get(
-        filter: {
-          if (naslov != null && naslov.isNotEmpty) "Naslov": naslov,
-          if (selectedZanrId != null) "ZanrId": selectedZanrId,
-        },
-      );*/
       var result = await provider.get(
         filter: {
           "KorisnikId": Authorization.korisnik!.id,
@@ -102,97 +92,6 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     }
   }
 
-  /*Future<void> toggleFavorite(Knjiga knjiga) async {
-    bool newValue = !(knjiga.isFavorite ?? false);
-
-    setState(() {
-      knjiga.isFavorite = newValue;
-    });
-
-    var provider = KnjigaProvider();
-    await provider.update(knjiga.id!, {
-      "isFavorite": newValue,
-    });
-  }*/
-  Future<void> toggleFavorite(Knjiga knjiga) async {
-    bool newValue = !(knjiga.isFavorite ?? false);
-
-    // značke prije
-    var prije = await KorisnikZnackaProvider()
-        .get(filter: {"idKorisnik": Authorization.korisnik!.id});
-
-    var prijeIds = prije.result.map((x) => x.znackaId).toSet();
-
-    setState(() {
-      knjiga.isFavorite = newValue;
-    });
-
-    await KnjigaProvider().update(
-      knjiga.id!,
-      {
-        "isFavorite": newValue,
-      },
-    );
-
-    await Future.delayed(
-      const Duration(milliseconds: 500),
-    );
-
-    // značke poslije
-    var poslije = await KorisnikZnackaProvider()
-        .get(filter: {"idKorisnik": Authorization.korisnik!.id});
-
-    var poslijeIds = poslije.result.map((x) => x.znackaId).toSet();
-
-    var noveIds = poslijeIds.difference(prijeIds);
-
-    if (noveIds.isEmpty) return;
-
-    var sve = await ZnackaProvider().get();
-
-    List<Znacka> osvojene =
-        sve.result.where((z) => noveIds.contains(z.id)).toList();
-
-    if (!mounted) return;
-
-    AchievementDialog.show(
-      context,
-      osvojene,
-    );
-  }
-
-  Future<void> deleteKnjiga(Knjiga knjiga) async {
-    var provider = KnjigaProvider();
-    await provider.delete(knjiga.id!);
-
-    setState(() {
-      knjige.removeWhere((k) => k.id == knjiga.id);
-    });
-  }
-
-  void showDeleteDialog(Knjiga knjiga) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Brisanje knjige"),
-        content: const Text("Da li ste sigurni?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Ne"),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await deleteKnjiga(knjiga);
-            },
-            child: const Text("Da", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget buildStars(int rating) {
     return Row(
       children: List.generate(
@@ -206,106 +105,160 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
     );
   }
 
+  Future<void> toggleFavorite(Knjiga knjiga) async {
+    final novaVrijednost = !(knjiga.isFavorite ?? false);
+
+    // optimistički update — UI se odmah promijeni, ne čeka se odgovor servera
+    setState(() {
+      knjiga.isFavorite = novaVrijednost;
+    });
+
+    try {
+      var provider = KnjigaProvider();
+      await provider.update(knjiga.id!, {
+        "isFavorite": novaVrijednost,
+      });
+    } catch (e) {
+      // ako update ne uspije, vraćamo staro stanje
+      if (!mounted) return;
+      setState(() {
+        knjiga.isFavorite = !novaVrijednost;
+      });
+    }
+  }
+
   Widget buildBookCard(Knjiga knjiga) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => KnjigaDetaljiScreen(knjiga: knjiga),
+    final bool isFav = knjiga.isFavorite ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        elevation: 3,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 🖼 IMAGE LEFT
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: 85,
-                      height: 110,
-                      color: Colors.grey.shade300,
-                      child: (knjiga.slika != null && knjiga.slika!.isNotEmpty)
-                          ? Image.memory(
-                              base64Decode(knjiga.slika!),
-                              fit: BoxFit.cover,
-                            )
-                          : const Icon(Icons.menu_book),
-                    ),
+            // cijela kartica (osim srca) otvara detalje knjige.
+            // behavior: opaque -> reaguje na tap svugdje unutar svojih
+            // granica, ne samo tamo gdje ima slike/teksta/boje.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => KnjigaDetaljiScreen(knjiga: knjiga),
                   ),
+                );
 
-                  const SizedBox(width: 12),
-
-                  // 📝 RIGHT CONTENT
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          knjiga.naslov ?? "",
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                if (result == true) {
+                  loadData(naslov: searchController.text);
+                }
+              },
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // tanka akcent traka — vizuelni potpis brenda na svakoj kartici
+                    Container(
+                      width: 5,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
                         ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          knjiga.autor ?? "",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        buildStars(knjiga.ocjena ?? 0),
-
-                        const SizedBox(height: 8),
-
-                        // ❤️ FAVORITE
-                        GestureDetector(
-                          onTap: () => toggleFavorite(knjiga),
-                          child: Icon(
-                            (knjiga.isFavorite ?? false)
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: Colors.red,
-                            size: 18,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 72,
+                          height: 100,
+                          color: const Color(0xFFEFF2EE),
+                          child: (knjiga.slika != null &&
+                                  knjiga.slika!.isNotEmpty)
+                              ? Image.memory(
+                                  base64Decode(knjiga.slika!),
+                                  fit: BoxFit.cover,
+                                )
+                              : Icon(
+                                  Icons.menu_book_rounded,
+                                  color: Colors.grey.shade400,
+                                ),
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              // ostavlja prostor da naslov ne ide ispod srca
+                              padding: const EdgeInsets.only(right: 22),
+                              child: Text(
+                                knjiga.naslov ?? "",
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF263238),
+                                  height: 1.2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              knjiga.autor ?? "",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildStars(knjiga.ocjena ?? 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            // ❌ DELETE TOP RIGHT
+            // srce — zaseban tap koji samo mijenja favorit, ne otvara detalje
             Positioned(
-              top: 6,
-              right: 6,
+              top: 4,
+              right: 4,
               child: GestureDetector(
-                onTap: () => showDeleteDialog(knjiga),
-                child: const Icon(
-                  Icons.close,
-                  size: 20,
-                  color: Colors.black,
+                onTap: () => toggleFavorite(knjiga),
+                child: Padding(
+                  // veći tap-target (44x44 preporuka) nego što sama ikonica izgleda
+                  padding: const EdgeInsets.all(10),
+                  child: Icon(
+                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    size: 18,
+                    color: isFav ? Colors.red : Colors.grey.shade400,
+                  ),
                 ),
               ),
             ),
@@ -476,16 +429,23 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                     },
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 // 📚 LIST
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: knjige.length,
-                    itemBuilder: (context, index) {
-                      return buildBookCard(knjige[index]);
-                    },
-                  ),
+                  child: knjige.isEmpty
+                      ? Center(
+                          child: Text(
+                            "Nema pronađenih knjiga",
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: knjige.length,
+                          itemBuilder: (context, index) {
+                            return buildBookCard(knjige[index]);
+                          },
+                        ),
                 ),
               ],
             ),

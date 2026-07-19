@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/models/knjiga.dart';
 import 'package:mybooks_mobile/providers/knjiga_provider.dart';
 import 'package:mybooks_mobile/data/moods.dart';
+import 'package:mybooks_mobile/screens/edit_knjiga_screen.dart';
 
 class KnjigaDetaljiScreen extends StatefulWidget {
   final Knjiga knjiga;
@@ -22,6 +23,7 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
   static const Color primaryDark = Color(0xFF4E6B54);
 
   late AnimationController _heartController;
+  bool isDeleting = false;
 
   @override
   void initState() {
@@ -62,6 +64,68 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
         widget.knjiga.isFavorite = !newValue;
       });
     }
+  }
+
+  // Otvara ekran za uređivanje knjige. Ako se korisnik vrati sa
+  // izmjenama (result == true), osvježavamo prikaz — pretpostavka je
+  // da EditKnjigaScreen mijenja isti Knjiga objekat (widget.knjiga) ili
+  // vraća true kad su izmjene sačuvane na backendu. Ako tvoj
+  // EditKnjigaScreen vraća ažurirani Knjiga objekat umjesto bool-a,
+  // javi mi pa prilagodim da se ovdje osvježe konkretna polja iz njega.
+  Future<void> editKnjiga() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditKnjigaScreen(knjiga: widget.knjiga),
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> deleteKnjiga() async {
+    setState(() => isDeleting = true);
+
+    try {
+      var provider = KnjigaProvider();
+      await provider.delete(widget.knjiga.id!);
+
+      if (!mounted) return;
+      Navigator.pop(context, true); // javlja prethodnom ekranu da osvježi listu
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isDeleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Greška pri brisanju knjige.")),
+      );
+    }
+  }
+
+  void showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Brisanje knjige"),
+        content: Text(
+          "Da li ste sigurni da želite obrisati \"${widget.knjiga.naslov ?? ''}\"?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Ne"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // zatvori dialog
+              await deleteKnjiga();
+            },
+            child: const Text("Da", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget buildStars(num rating, {double size = 20}) {
@@ -154,6 +218,28 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                // ✏️ EDIT — lijevo od srca, ista visina, isti stil
+                Positioned(
+                  top: 12,
+                  right: 60,
+                  child: Material(
+                    color: Colors.white.withOpacity(0.18),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: editKnjiga,
+                      child: const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
 
@@ -403,6 +489,41 @@ class _KnjigaDetaljiScreenState extends State<KnjigaDetaljiScreen>
                           ),
                         ),
                       ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // ===== OBRIŠI KNJIGU =====
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: isDeleting ? null : showDeleteDialog,
+                      icon: isDeleting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.red,
+                              ),
+                            )
+                          : const Icon(Icons.delete_outline_rounded,
+                              color: Colors.red),
+                      label: Text(
+                        isDeleting ? "Brisanje..." : "Obriši knjigu",
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.red.shade200),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
                 ],

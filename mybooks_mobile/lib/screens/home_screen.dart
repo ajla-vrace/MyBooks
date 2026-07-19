@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
 import 'package:mybooks_mobile/data/moods.dart';
@@ -155,22 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Color getGenreColor(int index) {
-    final colors = [
-      const Color(0xFF6D8B74),
-      const Color(0xFFA4B494),
-      const Color(0xFFD8C3A5),
-      const Color(0xFFB7B7A4),
-      const Color(0xFF8AA29E),
-      const Color(0xFFE6B89C),
-    ];
-    return colors[index % colors.length];
-  }
-
-  List get booksPerMonth => statistika?.knjigePoMjesecima ?? [];
-
-  List get genres => statistika?.topZanrovi ?? [];
-  List get authors => statistika?.topAutori ?? [];
   List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
 
   String getMoodEmoji(String? moodText) {
@@ -522,114 +505,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildBooksChart() {
-    if (booksPerMonth.isEmpty) return const SizedBox();
-
-    return SizedBox(
-      height: 250,
-      child: BarChart(
-        BarChartData(
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(show: true),
-          alignment: BarChartAlignment.spaceAround,
-          titlesData: FlTitlesData(
-            topTitles: AxisTitles(),
-            rightTitles: AxisTitles(),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: true),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  int index = value.toInt();
-                  if (index >= booksPerMonth.length) {
-                    return const SizedBox();
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      booksPerMonth[index].mjesec ?? "",
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          barGroups: List.generate(
-            booksPerMonth.length,
-            (index) => BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: (booksPerMonth[index].broj ?? 0).toDouble(),
-                  width: 22,
-                  borderRadius: BorderRadius.circular(8),
-                  color: const Color(0xFF6D8B74),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildGenreChart() {
-    if (genres.isEmpty) return const SizedBox();
-
-    return SizedBox(
-      height: 240,
-      child: PieChart(
-        PieChartData(
-          sectionsSpace: 3,
-          centerSpaceRadius: 55,
-          sections: genres.asMap().entries.map((entry) {
-            final index = entry.key;
-            final g = entry.value;
-
-            return PieChartSectionData(
-              color: getGenreColor(index),
-              value: (g.postotak ?? 0).toDouble(),
-              title: "${g.postotak?.toStringAsFixed(0)}%",
-              radius: 70,
-              titleStyle: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget buildGenreLegend() {
-    if (genres.isEmpty) return const SizedBox();
-
-    return Column(
-      children: genres.asMap().entries.map((entry) {
-        final index = entry.key;
-        final g = entry.value;
-
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            radius: 7,
-            backgroundColor: getGenreColor(index),
-          ),
-          title: Text(g.naziv ?? ""),
-          trailing: Text(
-            "${g.broj} knjiga",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Map<String, int> get heatmapData {
     final map = <String, int>{};
 
@@ -661,7 +536,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topGenre = (genres.isNotEmpty) ? genres.first.naziv ?? "-" : "-";
     final ukupnoKnjiga = statistika?.ukupnoKnjiga ?? 0;
     final yearlyGoal = Authorization.korisnik?.godisnjiCilj ?? 30;
 
@@ -909,104 +783,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: buildInfoCard(
-                      "Top žanr",
-                      topGenre,
-                      Icons.auto_awesome,
-                    ),
-                  ),
                   const SizedBox(height: 30),
-                  if (booksPerMonth.isNotEmpty) ...[
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "📚 Knjige po mjesecima",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            if (booksPerMonth.isNotEmpty)
-                              buildBooksChart()
-                            else
-                              const Text("Nema podataka"),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  if (genres.isNotEmpty) ...[
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "🏆 Najčitaniji žanrovi",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            if (genres.isNotEmpty) ...[
-                              buildGenreChart(),
-                              const SizedBox(height: 15),
-                              buildGenreLegend(),
-                            ] else
-                              const Text("Nema podataka"),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                  const SizedBox(height: 24),
-                  if (authors.isNotEmpty) ...[
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "✍️ Top autori",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            buildTopAutori(statistika?.topAutori ?? []),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  if (citatiPoDanima.isNotEmpty) ...[
+                 /* if (citatiPoDanima.isNotEmpty) ...[
                     Card(
                       elevation: 3,
                       shape: RoundedRectangleBorder(
@@ -1030,7 +808,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  ],
+                  ],*/
                 ],
               ),
             ),
@@ -1172,7 +950,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                "Analiziram tvoje knjige i raspoloženje čitanja",
+                "Analiziram tvoje wish knjige",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -1456,50 +1234,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget buildTopAutori(List topAutori) {
-    if (topAutori.isEmpty) return const SizedBox();
-
-    final max =
-        topAutori.map((e) => e.brojKnjiga ?? 0).reduce((a, b) => a > b ? a : b);
-
-    return Column(
-      children: topAutori.map((a) {
-        final percent = (a.brojKnjiga ?? 0) / max;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: Text(
-                  a.imeAutora ?? "",
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: percent.toDouble(),
-                    minHeight: 12,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: const AlwaysStoppedAnimation(
-                      Color(0xFF6D8B74),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text("${a.brojKnjiga}"),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 }
