@@ -599,7 +599,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 controller: opisController,
                 maxLines: 3,
                 maxLength: 1000,
-                decoration: inputStyle("Opis *"),
+                decoration: inputStyle("Opis "),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return "Opis je obavezan.";

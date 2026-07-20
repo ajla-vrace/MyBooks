@@ -183,46 +183,134 @@ namespace MyBooks.Service
          }*/
 
 
+        /*   public override async Task<Model.Knjiga> Update(
+       int id,
+       KnjigaUpdateRequest update)
+           {
+
+               var entity = await _context.Knjigas.FindAsync(id);
+
+
+               if (entity == null)
+               {
+                   throw new KeyNotFoundException(
+                       "Knjiga nije pronađen."
+                   );
+               }
+
+               if (!string.IsNullOrEmpty(update.SlikaBase64))
+               {
+                   entity.Slika = Convert.FromBase64String(update.SlikaBase64);
+               }
+
+               _mapper.Map(update, entity);
+
+
+
+               _context.Knjigas.Update(entity);
+
+
+               await _context.SaveChangesAsync();
+
+
+
+               // ==========================
+               // PROVJERA ZNAČKI
+               // nakon update-a
+               // ==========================
+
+               await _korisnikZnackaService
+                   .ProvjeriZnacke(entity.KorisnikId);
+
+
+
+               return _mapper.Map<Model.Knjiga>(entity);
+           }*/
+
+
         public override async Task<Model.Knjiga> Update(
     int id,
     KnjigaUpdateRequest update)
         {
 
-            var entity = await _context.Knjigas.FindAsync(id);
+            var entity = await _context.Knjigas
+                .Include(x => x.KnjigaZanrs)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
 
             if (entity == null)
             {
                 throw new KeyNotFoundException(
-                    "Knjiga nije pronađen."
+                    "Knjiga nije pronađena."
                 );
             }
 
 
+            if (!string.IsNullOrEmpty(update.SlikaBase64))
+            {
+                entity.Slika = Convert.FromBase64String(update.SlikaBase64);
+            }
 
+
+            // osnovni podaci
             _mapper.Map(update, entity);
 
 
 
-            _context.Knjigas.Update(entity);
+            // ==========================
+            // UPDATE ŽANROVA
+            // ==========================
+
+
+            if (update.ZanroviIds != null)
+            {
+
+                // obriši stare veze
+
+                var stariZanrovi = await _context.KnjigaZanrs
+                    .Where(x => x.IdKnjiga == id)
+                    .ToListAsync();
+
+
+                _context.KnjigaZanrs.RemoveRange(stariZanrovi);
+
+
+
+                // dodaj nove
+
+                foreach (var zanrId in update.ZanroviIds)
+                {
+                    _context.KnjigaZanrs.Add(
+                        new Database.KnjigaZanr
+                        {
+                            IdKnjiga = id,
+                            IdZanr = zanrId
+                        }
+                    );
+                }
+
+            }
+
 
 
             await _context.SaveChangesAsync();
 
 
 
-            // ==========================
-            // PROVJERA ZNAČKI
-            // nakon update-a
-            // ==========================
-
             await _korisnikZnackaService
                 .ProvjeriZnacke(entity.KorisnikId);
 
 
 
-            return _mapper.Map<Model.Knjiga>(entity);
+            var rezultat = await _context.Knjigas
+                .Include(x => x.KnjigaZanrs)
+                .ThenInclude(x => x.IdZanrNavigation)
+                .FirstAsync(x => x.Id == id);
+
+
+            return _mapper.Map<Model.Knjiga>(rezultat);
         }
+
         public async Task<StatistikaResponse> GetStatistika(int korisnikId)
         {
             /*var knjige = await _context.Knjigas

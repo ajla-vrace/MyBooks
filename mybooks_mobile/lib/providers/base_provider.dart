@@ -33,7 +33,7 @@ abstract class BaseProvider<T> with ChangeNotifier {
       defaultValue: "http://localhost:5208/",
     );*/ //ne oov
 
-    /*    _baseUrl = const String.fromEnvironment("baseUrl",
+     /*  _baseUrl = const String.fromEnvironment("baseUrl",
       defaultValue: "http://10.0.2.2:5208/",);*/
 
     // defaultValue: "https://10.0.2.2:7208/"); //za emulator

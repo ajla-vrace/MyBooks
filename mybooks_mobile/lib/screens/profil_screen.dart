@@ -351,8 +351,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return buildStatCard(
-      title: "Kako knjige utiču na tebe",
-      emoji: "💙",
+     title: "Tvoj emocionalni trag",
+     emoji: "🎭",
       child: MoodRingChart(
         moods: statistika!.moodStatistika!,
       ),
@@ -1991,10 +1991,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                               tabs: const [
                                 Tab(
                                     icon: Icon(Icons.favorite),
-                                    text: "Favorites"),
+                                    text: "Favoriti"),
                                 Tab(
                                     icon: Icon(Icons.bookmark),
-                                    text: "Wishlist"),
+                                    text: "Wish knjige"),
                                 Tab(
                                   icon: Icon(Icons.travel_explore),
                                   text: "Sazviježđe",

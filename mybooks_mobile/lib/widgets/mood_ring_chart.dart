@@ -278,71 +278,71 @@ class MoodRingChart extends StatelessWidget {
   // BOJE MOODOVA
   // ============================
 
-  static Color getColor(int index){
+ static Color getColor(int index){
 
-    final colors = [
+  final colors = [
 
-      const Color(0xFF81C784), // sretna
-      const Color(0xFFFFB74D), // topla
-      const Color(0xFFBA68C8), // inspiracija
-      const Color(0xFF64B5F6), // mir
-      const Color(0xFFE57373), // tuga
-      const Color(0xFFFF8A65), // šok
-      const Color(0xFF9575CD), // razmišljanje
-      const Color(0xFFF06292), // ljubav
-      const Color(0xFF90A4AE), // neutralna
-      const Color(0xFFA1887F), // razočaranje
+    const Color(0xFF81C784), // Oduševljena
+    const Color(0xFFFFB74D), // Dirnuta
+    const Color(0xFFBA68C8), // Inspirisana
+    const Color(0xFFE57373), // Tužna
+    const Color(0xFFFF8A65), // Šokirana
+    const Color(0xFF9575CD), // Razmišljanje
+    const Color(0xFFFF7043), // Napeta
+    const Color(0xFF90A4AE), // Ravnodušna
+    const Color(0xFFA1887F), // Razočarana
+    const Color(0xFFEF5350), // Slomila me
 
-    ];
+  ];
 
 
-    return colors[index % colors.length];
+  return colors[index % colors.length];
 
-  }
+}
 
 
 
 
   static String getEmoji(String mood){
 
-    switch(mood){
+  switch(mood){
 
-      case "Oduševljena":
-        return "😊";
+    case "Oduševljena":
+      return "😊";
 
-      case "Dirnuta":
-        return "😢";
+    case "Dirnuta":
+      return "😢";
 
-      case "Inspirisana":
-        return "🤩";
+    case "Tužna":
+      return "😭";
 
-      case "Opuštena":
-        return "😌";
+    case "Inspirisana":
+      return "🤩";
 
-      case "Tužna":
-        return "😭";
+    case "Šokirana":
+      return "😱";
 
-      case "Šokirana":
-        return "😱";
+    case "Napeta":
+      return "🔥";
 
-      case "Natjerala me na razmišljanje":
-        return "🤔";
+    case "Ravnodušna":
+      return "😐";
 
-      case "Nova omiljena":
-        return "😍";
+    case "Razočarana":
+      return "😤";
 
-      case "Ravnodušna":
-        return "😐";
+    case "Slomila me":
+      return "💔";
 
-      case "Razočarana":
-        return "😤";
+    case "Za razmišljanje":
+      return "🤔";
 
 
-      default:
-        return "📚";
-    }
-
+    default:
+      return "📚";
   }
+
+}
 
 }
 

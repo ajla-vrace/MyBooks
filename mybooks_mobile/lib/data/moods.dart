@@ -1,4 +1,4 @@
-const List<Map<String, String>> moods = [
+/*const List<Map<String, String>> moods = [
   {"emoji": "😊", "text": "Oduševljena"},
   {"emoji": "😢", "text": "Dirnuta"},
   {"emoji": "🤩", "text": "Inspirisana"},
@@ -7,6 +7,30 @@ const List<Map<String, String>> moods = [
   {"emoji": "😱", "text": "Šokirana"},
   {"emoji": "🤔", "text": "Natjerala me na razmišljanje"},
   {"emoji": "😍", "text": "Nova omiljena"},
+  {"emoji": "😐", "text": "Ravnodušna"},
+  {"emoji": "😤", "text": "Razočarana"},
+];*/
+/*const List<Map<String, String>> moods = [
+  {"emoji": "😊", "text": "Oduševljena"},
+  {"emoji": "😢", "text": "Dirnuta"},
+  {"emoji": "😭", "text": "Tužna"},
+  {"emoji": "🤩", "text": "Inspirisana"},
+  {"emoji": "😱", "text": "Šokirana"},
+  {"emoji": "🔥", "text": "Napeta"},
+  {"emoji": "😐", "text": "Ravnodušna"},
+  {"emoji": "😤", "text": "Razočarana"},
+  {"emoji": "💔", "text": "Slomila me"},
+  {"emoji": "🤔", "text": "Za razmišljanje"},
+];*/
+const List<Map<String, String>> moods = [
+  {"emoji": "😊", "text": "Oduševljena"},
+  {"emoji": "😢", "text": "Dirnuta"},
+  {"emoji": "💔", "text": "Slomila me"},
+  {"emoji": "🤩", "text": "Inspirisana"},
+  {"emoji": "🔥", "text": "Napeta"},
+  {"emoji": "😱", "text": "Šokirana"},
+  {"emoji": "🤔", "text": "Za razmišljanje"},
+  {"emoji": "🌑", "text": "Teška"},
   {"emoji": "😐", "text": "Ravnodušna"},
   {"emoji": "😤", "text": "Razočarana"},
 ];

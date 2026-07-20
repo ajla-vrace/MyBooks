@@ -28,6 +28,8 @@ class KorisnikZnackaProvider extends BaseProvider<KorisnikZnacka> {
   static const String baseUrl = String.fromEnvironment(
     "baseUrl",
     defaultValue: "https://localhost:7208/",
+    // defaultValue: "http://localhost:5208/",
+    // defaultValue: "http://10.0.2.2:5208/",
   );
 
   final HttpClient client = HttpClient()
