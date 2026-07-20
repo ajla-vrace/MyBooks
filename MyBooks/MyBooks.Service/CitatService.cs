@@ -174,19 +174,30 @@ namespace MyBooks.Service
                 .FirstOrDefault();
 
             // CURRENT STREAK
+            // CURRENT STREAK
             int trenutniNiz = 0;
-            var checkDate = danas;
 
-            foreach (var d in citati)
+            if (citati.Any())
             {
-                if (d == checkDate)
+                var zadnjiDatum = citati.First();
+
+                // streak još traje ako je zadnji unos danas ili jučer
+                if (zadnjiDatum >= danas.AddDays(-1))
                 {
-                    trenutniNiz++;
-                    checkDate = checkDate.AddDays(-1);
-                }
-                else if (d < checkDate)
-                {
-                    break;
+                    var checkDate = zadnjiDatum;
+
+                    foreach (var d in citati)
+                    {
+                        if (d == checkDate)
+                        {
+                            trenutniNiz++;
+                            checkDate = checkDate.AddDays(-1);
+                        }
+                        else if (d < checkDate)
+                        {
+                            break;
+                        }
+                    }
                 }
             }
 

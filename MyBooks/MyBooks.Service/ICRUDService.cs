@@ -1,4 +1,5 @@
-﻿using MyBooks.Service;
+﻿using MyBooks.Model;
+using MyBooks.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace MyBooks.Service
         Task<T> Insert(TInsert insert);
         Task<T> Update(int id, TUpdate update);
         Task<bool> Delete(int id);
+       // Task<Znacka?> GetSljedecaZnacka(int idKorisnik);
         //Task<StatistikaResponse> GetStatistika();
     }
 }

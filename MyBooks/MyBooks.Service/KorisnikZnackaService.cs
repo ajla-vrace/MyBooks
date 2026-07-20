@@ -307,5 +307,147 @@ namespace MyBooks.Service
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task<Model.Znacka?> GetSljedecaZnacka(int idKorisnik)
+        {
+            // sve značke
+            var databaseZnacke = await _context.Znackas
+                .ToListAsync();
+
+
+            // značke koje korisnik već ima
+            var osvojeneIds = await _context.KorisnikZnackas
+                .Where(x => x.KorisnikId == idKorisnik)
+                .Select(x => x.ZnackaId)
+                .ToListAsync();
+
+
+
+            var rezultat = new List<Model.Znacka>();
+
+
+            foreach (var dbZnacka in databaseZnacke)
+            {
+
+                // preskoči već osvojene
+                if (osvojeneIds.Contains(dbZnacka.Id))
+                    continue;
+
+
+
+                var znacka = _mapper.Map<Model.Znacka>(dbZnacka);
+
+
+                znacka.TrenutniNapredak =
+                    await IzracunajNapredak(idKorisnik, dbZnacka);
+
+
+                rezultat.Add(znacka);
+            }
+
+
+
+            return rezultat
+                .Where(x => x.Preostalo > 0)
+                .OrderBy(x => x.Preostalo)
+                .FirstOrDefault();
+        }
+        private async Task<int> IzracunajNapredak(
+    int korisnikId,
+    Database.Znacka znacka)
+        {
+            switch (znacka.Tip)
+            {
+                case "Books":
+                    return await _context.Knjigas
+                        .CountAsync(x => x.KorisnikId == korisnikId);
+
+
+                case "Quotes":
+                    return await _context.Citats
+                        .CountAsync(x =>
+                            x.IdKnjigaNavigation.KorisnikId == korisnikId);
+
+
+                case "Genres":
+                    return await _context.KnjigaZanrs
+                        .Where(x =>
+                            x.IdKnjigaNavigation.KorisnikId == korisnikId)
+                        .Select(x => x.IdZanr)
+                        .Distinct()
+                        .CountAsync();
+
+
+                case "Favorites":
+                    return await _context.Knjigas
+                        .CountAsync(x =>
+                            x.KorisnikId == korisnikId &&
+                            x.IsFavorite == true);
+
+
+                case "Mood":
+                    return await _context.Knjigas
+                        .Where(x =>
+                            x.KorisnikId == korisnikId &&
+                            x.Mood != null)
+                        .Select(x => x.Mood)
+                        .Distinct()
+                        .CountAsync();
+
+
+                case "Streak":
+                    return await IzracunajStreak(korisnikId);
+
+
+                default:
+                    return 0;
+            }
+        }
+        private async Task<int> IzracunajStreak(int korisnikId)
+        {
+            var datumiCitata = await _context.Citats
+                .Where(x => x.IdKnjigaNavigation.KorisnikId == korisnikId)
+                .Where(x => x.DatumKreiranja.HasValue)
+                .Select(x => x.DatumKreiranja.Value.Date)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
+
+
+            int najduziStreak = 0;
+            int trenutniStreak = 0;
+
+
+            for (int i = 0; i < datumiCitata.Count; i++)
+            {
+                if (i == 0)
+                {
+                    trenutniStreak = 1;
+                }
+                else
+                {
+                    var razlika =
+                        (datumiCitata[i] - datumiCitata[i - 1]).Days;
+
+
+                    if (razlika == 1)
+                    {
+                        trenutniStreak++;
+                    }
+                    else
+                    {
+                        trenutniStreak = 1;
+                    }
+                }
+
+
+                if (trenutniStreak > najduziStreak)
+                {
+                    najduziStreak = trenutniStreak;
+                }
+            }
+
+
+            return najduziStreak;
+        }
     }
 }

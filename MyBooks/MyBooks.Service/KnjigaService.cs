@@ -365,7 +365,7 @@ namespace MyBooks.Service
 
             return result;
         }
-        public override async Task<bool> Delete(int id)
+        /*public override async Task<bool> Delete(int id)
         {
             var entity = await _context.Knjigas
                 .Include(x => x.KnjigaZanrs)
@@ -378,6 +378,44 @@ namespace MyBooks.Service
             _context.Knjigas.Remove(entity);
 
             await _context.SaveChangesAsync();
+
+            return true;
+        }*/
+        public override async Task<bool> Delete(int id)
+        {
+            var entity = await _context.Knjigas
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (entity == null)
+            {
+                throw new Exception("Knjiga nije pronađena.");
+            }
+
+
+            // 1. Obrisi citate
+            var citati = await _context.Citats
+                .Where(x => x.IdKnjiga == id)
+                .ToListAsync();
+
+            _context.Citats.RemoveRange(citati);
+
+
+
+            // 2. Obrisi veze sa zanrovima
+            var knjigaZanrovi = await _context.KnjigaZanrs
+                .Where(x => x.IdKnjiga == id)
+                .ToListAsync();
+
+            _context.KnjigaZanrs.RemoveRange(knjigaZanrovi);
+
+
+
+            // 4. Na kraju knjiga
+            _context.Knjigas.Remove(entity);
+
+
+            await _context.SaveChangesAsync();
+
 
             return true;
         }

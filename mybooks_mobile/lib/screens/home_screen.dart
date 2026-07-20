@@ -13,6 +13,39 @@ import 'package:mybooks_mobile/providers/citat_provider.dart';
 import 'package:mybooks_mobile/providers/wishKnjiga_provider.dart';
 import 'package:mybooks_mobile/screens/add_citat_screen.dart';
 import 'package:mybooks_mobile/screens/add_knjiga_screen.dart';
+import 'package:mybooks_mobile/models/znacka.dart';
+import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
+
+// ============================================================
+// 🎨 JEDINSTVENA PALETA BOJA
+// Sve zelene nijanse u appu izvedene su iz ove dvije osnovne
+// boje, kako ne bi bilo mješanja "brend" zelene i Material
+// zelene (Colors.green) po ekranu.
+// ============================================================
+class AppColors {
+  static const Color primary = Color(0xFF6D8B74);
+  static const Color primaryLight = Color(0xFFA4B494);
+
+  // pozadina/ivica "obične" (stat) kartice
+  static const Color cardBorder = Color(0x406D8B74); // primary @ 25%
+
+  // "uspjeh" / completed stanje — tamnija varijanta iste zelene,
+  // NE Colors.green, da ostane u istoj paleti
+  static Color successBg = primary.withOpacity(0.12);
+  static const Color successBorder = primary;
+  static const Color successIcon = primary;
+
+  static const double radiusLg = 20;
+  static const double radiusMd = 14;
+
+  static const List<BoxShadow> softShadow = [
+    BoxShadow(
+      color: Colors.black12,
+      blurRadius: 8,
+      offset: Offset(0, 3),
+    ),
+  ];
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int brojCitata = 0;
   Statistika? statistika;
   CitatStatistika? citatStatistika;
-  //final int yearlyGoal = 30;
   int brojFavorita = 0;
   WishKnjiga? randomBook;
   bool loadingRandom = false;
@@ -35,82 +67,57 @@ class _HomeScreenState extends State<HomeScreen> {
   bool imaKnjiga = false;
   bool imaWishKnjiga = false;
   final currentYear = DateTime.now().year;
-
+  Znacka? sljedecaZnacka;
   Knjiga? danasnjaKnjiga;
+
   @override
   void initState() {
     super.initState();
     loadData();
   }
 
-  /*@override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    loadData();
-  }*/
-
   Future<void> loadData() async {
     try {
       var korisnikId = Authorization.korisnik!.id;
 
-      // statistika
       var provider = StatistikaProvider();
+      var result = await provider.getStatistika(korisnikId);
 
-      var result = await provider.getStatistika(
-        korisnikId,
-      );
-
-      // statistika citata
       var citatProvider = CitatStatistikaProvider();
+      var citatResult = await citatProvider.getStatistika(korisnikId);
 
-      var citatResult = await citatProvider.getStatistika(
-        korisnikId,
-      );
-
-      print("CITAT STATISTIKA: ${citatResult.toJson()}");
-
-      for (var c in citatResult.citatiPoDanima ?? []) {
-        print("${c.datum} -> ${c.broj}");
-      }
-
-      // broj citata korisnika
       var citati = await CitatProvider().get(
-        filter: {
-          "KorisnikId": korisnikId,
-        },
+        filter: {"KorisnikId": korisnikId},
       );
 
-      // provjera ima li korisnik knjiga
+      var znackaProvider = KorisnikZnackaProvider();
+      var sljedeca = await znackaProvider.getSljedecaZnacka(korisnikId);
+
       var knjige = await KnjigaProvider().get(
-        filter: {
-          "KorisnikId": korisnikId,
-        },
+        filter: {"KorisnikId": korisnikId},
       );
       var favoriti = knjige.result.where((x) => x.isFavorite == true).length;
-      // provjera ima li korisnik wish knjiga
+
       var wishKnjige = await WishKnjigaProvider().get(
-        filter: {
-          "KorisnikId": korisnikId,
-        },
+        filter: {"KorisnikId": korisnikId},
       );
+
       var danas = await KnjigaProvider().get(
         filter: {
           "KorisnikId": korisnikId,
           "NaDanasnjiDan": true,
         },
       );
+
       if (!mounted) return;
 
       setState(() {
         statistika = result;
-
         citatStatistika = citatResult;
-
+        sljedecaZnacka = sljedeca;
         brojCitata = citati.result.length;
         brojFavorita = favoriti;
-        // 🔥 provjere za prikaz kartica
         imaKnjiga = knjige.result.isNotEmpty;
-
         imaWishKnjiga = wishKnjige.result.isNotEmpty;
         danasnjaKnjiga = danas.result.isNotEmpty ? danas.result.first : null;
         isLoading = false;
@@ -122,15 +129,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         statistika = null;
-
         citatStatistika = null;
-
         brojCitata = 0;
-
         imaKnjiga = false;
-
         imaWishKnjiga = false;
-
         isLoading = false;
       });
     }
@@ -143,7 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     await Future.delayed(const Duration(milliseconds: 600));
-    // mala "spin" animacija
 
     final result =
         await WishKnjigaProvider().getRandom(Authorization.korisnik!.id);
@@ -154,7 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
+  List<CitatPoDanu> get citatiPoDanima =>
+      citatStatistika?.citatiPoDanima ?? [];
 
   String getMoodEmoji(String? moodText) {
     if (moodText == null) return "📖";
@@ -166,9 +168,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return found?["emoji"] ?? "📖";
   }
 
-  // 🌱 Empty state — prikazuje se samo kad korisnik nema NIJEDNU knjigu.
-  // Poziva na akciju i vodi direktno na ekran za dodavanje prve knjige;
-  // nakon povratka radimo refresh da kartica nestane čim se knjiga doda.
+  // ============================================================
+  // 🌱 HERO / CTA KARTICE — namjerno upadljive, uvijek isti
+  // gradient (primary -> primaryLight) da se odmah prepoznaju
+  // kao "akcione" kartice na ekranu.
+  // ============================================================
+
   Widget buildEmptyStateCard() {
     return Container(
       width: double.infinity,
@@ -177,9 +182,9 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+          colors: [AppColors.primary, AppColors.primaryLight],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (_) => const AddKnjigaScreen(),
                   ),
                 ).then((_) {
-                  loadData(); // 🔥 refresh nakon dodavanja prve knjige
+                  loadData();
                 });
               },
               icon: const Icon(Icons.add),
@@ -242,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF6D8B74),
+                foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -270,7 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
       godine = DateTime.now().year - datum.year;
     }
 
-    // ispravna gramatika: godinu / godine / godina
     String vremenskiTekst;
     if (godine == 1) {
       vremenskiTekst = "Prije godinu dana";
@@ -281,23 +285,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppColors.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF6D8B74),
-              Color(0xFF4F6F58),
-            ],
+            colors: [AppColors.primary, AppColors.primaryLight],
           ),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // suptilan dekorativni krug u pozadini
             Positioned(
               top: -20,
               right: -20,
@@ -310,7 +310,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -350,7 +349,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 6),
                     ],
-                    // vremenska oznaka SAMO ako je proslih godina
                     if (godine > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -384,7 +382,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -393,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 48,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppColors.radiusMd),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.2),
@@ -405,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: const Icon(
                         Icons.auto_stories,
                         size: 24,
-                        color: Color(0xFF6D8B74),
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -456,8 +453,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-
-                // MOOD — kompaktan red
                 if (mood != null && mood.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Container(
@@ -505,313 +500,92 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Map<String, int> get heatmapData {
-    final map = <String, int>{};
+  Widget buildSljedecaZnackaCard() {
+    final znacka = sljedecaZnacka!;
 
-    for (var item in citatStatistika?.citatiPoDanima ?? []) {
-      if (item.datum == null) continue;
+    final napredak = znacka.trenutniNapredak ?? 0;
+    final prag = znacka.prag;
 
-      final key = item.datum!.toIso8601String().split("T")[0];
-      final value = (item.broj ?? 0) as num;
-      map[key] = (map[key] ?? 0) + value.toInt();
-    }
+    final progress = prag == 0 ? 0.0 : napredak / prag;
 
-    return map;
-  }
-
-  Color heatColor(int value) {
-    if (value == 0) return Colors.grey.shade200;
-    if (value == 1) return const Color(0xFF9BE9A8);
-    if (value == 2) return const Color(0xFF40C463);
-    if (value == 3) return const Color(0xFF30A14E);
-    return const Color(0xFF216E39);
-  }
-
-  List<DateTime> get last365Days {
-    final today = DateTime.now();
-    return List.generate(365, (i) {
-      return today.subtract(Duration(days: 364 - i));
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ukupnoKnjiga = statistika?.ukupnoKnjiga ?? 0;
-    final yearlyGoal = Authorization.korisnik?.godisnjiCilj ?? 30;
-
-    final progress =
-        ukupnoKnjiga >= yearlyGoal ? 1.0 : ukupnoKnjiga / yearlyGoal;
-
-    final int remaining =
-        ukupnoKnjiga >= yearlyGoal ? 0 : yearlyGoal - ukupnoKnjiga;
-
-    final int percentage = (progress * 100).round();
-
-    String motivationText;
-
-    if (ukupnoKnjiga == 0) {
-      motivationText = "Svaka velika biblioteka počinje prvom knjigom. 📖";
-    } else if (progress < 0.25) {
-      motivationText = "Odličan početak! Nastavi graditi svoju biblioteku. 🌱";
-    } else if (progress < 0.50) {
-      motivationText = "Već si na dobrom putu. Samo tako! 💪";
-    } else if (progress < 0.75) {
-      motivationText = "Više od pola cilja je iza tebe. 📚";
-    } else if (progress < 1) {
-      motivationText = "Još samo $remaining knjiga do godišnjeg cilja! 🚀";
-    } else {
-      motivationText = "🎉 Čestitamo! Ostvarila si svoj godišnji cilj!";
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF6D8B74),
-        foregroundColor: const Color.fromARGB(221, 253, 253, 253),
-        title: const Text(
-          "Home",
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
         ),
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Dobrodošla, ${Authorization.korisnik?.ime}👋",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "Pregled tvoje biblioteke",
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  //const SizedBox(height: 20),
-                  const SizedBox(height: 22),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color:
-                          progress >= 1 ? Colors.green.shade50 : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: progress >= 1
-                            ? Colors.green
-                            : const Color(0xFF6D8B74).withOpacity(0.25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                znacka.ikonica ?? "🏆",
+                style: const TextStyle(fontSize: 30),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "🎯 Sljedeća značka",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              progress >= 1 ? Icons.emoji_events : Icons.flag,
-                              color: progress >= 1
-                                  ? Colors.green
-                                  : const Color(0xFF6D8B74),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Cilj čitanja $currentYear",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    const Color(0xFF6D8B74).withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                "$percentage%",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF6D8B74),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 10,
-                            backgroundColor: Colors.grey.shade300,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              progress >= 1
-                                  ? Colors.green
-                                  : const Color(0xFF6D8B74),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          "$ukupnoKnjiga od $yearlyGoal pročitanih knjiga",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          motivationText,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        if (progress >= 1) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.celebration,
-                                  color: Colors.green,
-                                ),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Bravo! Ostvarila si svoj godišnji cilj čitanja! 🎉",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                        ],
-                      ],
+                    Text(
+                      znacka.naziv,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  // 🌱 Empty state — samo kad korisnik nema NIJEDNU knjigu.
-                  // Poziva na akciju odmah ispod cilja čitanja.
-                  if (!imaKnjiga) ...[
-                    buildEmptyStateCard(),
-                    const SizedBox(height: 24),
                   ],
-                  /*buildDailyChallengeCard(),
-                  const SizedBox(height: 24),*/
-                  if (danasnjaKnjiga != null) ...[
-                    buildTodayMemoryCard(),
-                    const SizedBox(height: 24),
-                  ],
-                  if (imaKnjiga) ...[
-                    buildDailyChallengeCard(),
-                    const SizedBox(height: 24),
-                  ],
-                  /*buildRandomWishBook(),
-                  const SizedBox(height: 24),*/
-                  if (imaWishKnjiga) ...[
-                    buildRandomWishBook(),
-                    const SizedBox(height: 24),
-                  ],
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: buildInfoCard(
-                          "Knjige",
-                          "${statistika?.ukupnoKnjiga ?? 0}",
-                          Icons.menu_book,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: buildInfoCard(
-                          "Ocjena",
-                          (statistika?.prosjecnaOcjena ?? 0).toStringAsFixed(1),
-                          Icons.star,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: buildInfoCard(
-                          "Citati",
-                          "$brojCitata",
-                          Icons.format_quote,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: buildInfoCard(
-                          "Favoriti",
-                          "$brojFavorita",
-                          Icons.favorite,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                 /* if (citatiPoDanima.isNotEmpty) ...[
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "🔥 Tvoja čitalačka aktivnost (zadnjih 365 dana)",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 16),
-                            //buildMonthLabels(),
-                            //const SizedBox(height: 8),
-                            // buildGitHubHeatmap(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],*/
-                ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            znacka.opis ?? "",
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0, 1),
+              minHeight: 9,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "$napredak / $prag  •  još ${prag - napredak}",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (prag - napredak == 1)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                "🔥 Skoro si tu! Još samo jedan korak.",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
+        ],
+      ),
     );
   }
 
@@ -824,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+            colors: [AppColors.primary, AppColors.primaryLight],
           ),
           borderRadius: BorderRadius.circular(18),
         ),
@@ -864,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF6D8B74),
+                foregroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
@@ -903,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6D8B74)
+                          color: AppColors.primary
                               .withOpacity(0.25 + (value - 0.85)),
                           blurRadius: 30,
                           spreadRadius: 3,
@@ -922,7 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               spreadRadius: 6,
                             ),
                             BoxShadow(
-                              color: const Color(0xFF6D8B74).withOpacity(0.25),
+                              color: AppColors.primary.withOpacity(0.25),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -931,7 +705,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Icon(
                           Icons.psychology_alt,
                           size: 60,
-                          color: Color(0xFF6D8B74),
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -969,7 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF6D8B74), Color(0xFFA4B494)],
+            colors: [AppColors.primary, AppColors.primaryLight],
           ),
           borderRadius: BorderRadius.circular(18),
         ),
@@ -1009,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF6D8B74),
+                foregroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1036,20 +810,314 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ============================================================
+  // 📊 STAT / STATUS KARTICE — bijele, tanka zelena ivica.
+  // "Uspjeh/gotovo" stanje = tamnija nijansa iste zelene
+  // (AppColors.successBg/successBorder), ne Colors.green.
+  // ============================================================
+
+  Widget buildGodisnjiCiljCard() {
+    final ukupnoKnjiga = statistika?.ukupnoKnjiga ?? 0;
+    final yearlyGoal = Authorization.korisnik?.godisnjiCilj ?? 30;
+
+    final progress =
+        ukupnoKnjiga >= yearlyGoal ? 1.0 : ukupnoKnjiga / yearlyGoal;
+
+    final int remaining =
+        ukupnoKnjiga >= yearlyGoal ? 0 : yearlyGoal - ukupnoKnjiga;
+
+    final int percentage = (progress * 100).round();
+    final bool achieved = progress >= 1;
+
+    String motivationText;
+
+    if (ukupnoKnjiga == 0) {
+      motivationText = "Svaka velika biblioteka počinje prvom knjigom. 📖";
+    } else if (progress < 0.25) {
+      motivationText = "Odličan početak! Nastavi graditi svoju biblioteku. 🌱";
+    } else if (progress < 0.50) {
+      motivationText = "Već si na dobrom putu. Samo tako! 💪";
+    } else if (progress < 0.75) {
+      motivationText = "Više od pola cilja je iza tebe. 📚";
+    } else if (progress < 1) {
+      motivationText = "Još samo $remaining knjiga do godišnjeg cilja! 🚀";
+    } else {
+      motivationText = "🎉 Čestitamo! Ostvarila si svoj godišnji cilj!";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: achieved ? AppColors.successBg : Colors.white,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        border: Border.all(
+          color: achieved ? AppColors.successBorder : AppColors.cardBorder,
+        ),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                achieved ? Icons.emoji_events : Icons.flag,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Cilj čitanja $currentYear",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "$percentage%",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: Colors.grey.shade300,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            "$ukupnoKnjiga od $yearlyGoal pročitanih knjiga",
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            motivationText,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          if (achieved) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:  Row(
+                children: [
+                  Icon(Icons.celebration, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Bravo! Ostvarila si svoj godišnji cilj čitanja! 🎉",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget buildDailyChallengeCard() {
+    final dodanoDanas = citatStatistika?.dodanoDanas ?? false;
+    final streak = citatStatistika?.trenutniNiz ?? 0;
+    final best = citatStatistika?.najduziNiz ?? 0;
+
+    String message;
+
+    if (!dodanoDanas) {
+      message = "Dodaj danasnji citat i nastavi svoj streak 🔥";
+    } else if (streak == 1) {
+      message = "Odličan početak! Prvi dan streaka 💪";
+    } else if (streak < 5) {
+      message = "Zadržavaš ritam! Ne prekidaj niz 📚";
+    } else if (streak < 10) {
+      message = "Wow! Već ozbiljan streak 🚀";
+    } else {
+      message = "Legenda si čitanja 📖🔥";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: dodanoDanas ? AppColors.successBg : Colors.white,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        border: Border.all(
+          color: dodanoDanas ? AppColors.successBorder : AppColors.cardBorder,
+        ),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                dodanoDanas ? Icons.check_circle : Icons.local_fire_department,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Dnevni izazov citata",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                "🔥 $streak",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                "Best streak: $best",
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      dodanoDanas ? Colors.grey.shade300 : AppColors.primary,
+                ),
+                onPressed: dodanoDanas
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AddCitatScreen(),
+                          ),
+                        ).then((_) {
+                          loadData();
+                        });
+                      },
+                child: Text(
+                  dodanoDanas ? "Danas gotovo" : "Dodaj citat",
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildInfoCard(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 22, color: AppColors.primary),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget getPriorityIcon(String? priority) {
     switch (priority) {
       case "Visok":
         return const Icon(Icons.local_fire_department, color: Colors.red);
-
       case "Srednji":
         return const Icon(Icons.flash_on, color: Colors.orange);
-
       case "Nizak":
-        return const Icon(Icons.eco, color: Colors.green);
-
+        return const Icon(Icons.eco, color: AppColors.primary);
       default:
         return const Icon(Icons.book, color: Colors.grey);
     }
+  }
+
+  Map<String, int> get heatmapData {
+    final map = <String, int>{};
+
+    for (var item in citatStatistika?.citatiPoDanima ?? []) {
+      if (item.datum == null) continue;
+
+      final key = item.datum!.toIso8601String().split("T")[0];
+      final value = (item.broj ?? 0) as num;
+      map[key] = (map[key] ?? 0) + value.toInt();
+    }
+
+    return map;
+  }
+
+  Color heatColor(int value) {
+    if (value == 0) return Colors.grey.shade200;
+    if (value == 1) return const Color(0xFF9BE9A8);
+    if (value == 2) return const Color(0xFF40C463);
+    if (value == 3) return const Color(0xFF30A14E);
+    return const Color(0xFF216E39);
+  }
+
+  List<DateTime> get last365Days {
+    final today = DateTime.now();
+    return List.generate(365, (i) {
+      return today.subtract(Duration(days: 364 - i));
+    });
   }
 
   Widget buildMonthLabels() {
@@ -1097,143 +1165,115 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget buildDailyChallengeCard() {
-    final dodanoDanas = citatStatistika?.dodanoDanas ?? false;
-    final streak = citatStatistika?.trenutniNiz ?? 0;
-    final best = citatStatistika?.najduziNiz ?? 0;
-
-    String message;
-
-    if (!dodanoDanas) {
-      message = "Dodaj danasnji citat i nastavi svoj streak 🔥";
-    } else if (streak == 1) {
-      message = "Odličan početak! Prvi dan streaka 💪";
-    } else if (streak < 5) {
-      message = "Zadržavaš ritam! Ne prekidaj niz 📚";
-    } else if (streak < 10) {
-      message = "Wow! Već ozbiljan streak 🚀";
-    } else {
-      message = "Legenda si čitanja 📖🔥";
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: dodanoDanas ? Colors.green.shade50 : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: dodanoDanas
-              ? Colors.green
-              : const Color(0xFF6D8B74).withOpacity(0.3),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: AppColors.primary,
+        foregroundColor: const Color.fromARGB(221, 253, 253, 253),
+        title: const Text(
+          "Home",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                dodanoDanas ? Icons.check_circle : Icons.local_fire_department,
-                color: dodanoDanas ? Colors.green : Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                "Dnevni izazov citata",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              Text(
-                "🔥 $streak",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                "Best streak: $best",
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const Spacer(),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      dodanoDanas ? Colors.grey : const Color(0xFF6D8B74),
-                ),
-                onPressed: dodanoDanas
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AddCitatScreen(),
-                          ),
-                        ).then((_) {
-                          loadData(); // 🔥 refresh nakon dodavanja
-                        });
-                      },
-                child: Text(
-                  dodanoDanas ? "Danas gotovo" : "Dodaj citat",
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Dobrodošla, ${Authorization.korisnik?.ime}👋",
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Pregled tvoje biblioteke",
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  buildGodisnjiCiljCard(),
+                  const SizedBox(height: 24),
 
-  Widget buildInfoCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 206, 217, 210),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 22, color: Colors.black87),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+                  // 🌱 Empty state — samo kad korisnik nema NIJEDNU knjigu.
+                  if (!imaKnjiga) ...[
+                    buildEmptyStateCard(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  if (danasnjaKnjiga != null) ...[
+                    buildTodayMemoryCard(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  if (imaKnjiga) ...[
+                    buildDailyChallengeCard(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  if (sljedecaZnacka != null) ...[
+                    buildSljedecaZnackaCard(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  if (imaWishKnjiga) ...[
+                    buildRandomWishBook(),
+                    const SizedBox(height: 24),
+                  ],
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: buildInfoCard(
+                          "Knjige",
+                          "${statistika?.ukupnoKnjiga ?? 0}",
+                          Icons.menu_book,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: buildInfoCard(
+                          "Ocjena",
+                          (statistika?.prosjecnaOcjena ?? 0)
+                              .toStringAsFixed(1),
+                          Icons.star,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: buildInfoCard(
+                          "Citati",
+                          "$brojCitata",
+                          Icons.format_quote,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: buildInfoCard(
+                          "Favoriti",
+                          "$brojFavorita",
+                          Icons.favorite,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

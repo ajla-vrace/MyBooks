@@ -11,11 +11,16 @@ namespace eSpa.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class KorisnikZnackaController : BaseCRUDController<KorisnikZnacka, KorisnikZnackaSearchObject, KorisnikZnackaInsertRequest, KorisnikZnackaUpdateRequest>
+    public class KorisnikZnackaController
+    : BaseCRUDController<KorisnikZnacka, KorisnikZnackaSearchObject, KorisnikZnackaInsertRequest, KorisnikZnackaUpdateRequest>
     {
-        public KorisnikZnackaController(ILogger<BaseController<KorisnikZnacka, KorisnikZnackaSearchObject>> logger, IKorisnikZnackaService service) : base(logger, service)
+        private readonly IKorisnikZnackaService _znackaService;
+        public KorisnikZnackaController(
+     ILogger<BaseController<KorisnikZnacka, KorisnikZnackaSearchObject>> logger,
+     IKorisnikZnackaService service)
+     : base(logger, service)
         {
-
+            _znackaService = service;
         }
         // [Authorize(Roles = "Administrator")]
         public override Task<KorisnikZnacka> Insert([FromBody] KorisnikZnackaInsertRequest insert)
@@ -35,6 +40,10 @@ namespace eSpa.Controllers
         {
             return base.Delete(id);
         }
-
+        [HttpGet("sljedeca/{idKorisnik}")]
+        public async Task<Znacka?> GetSljedeca(int idKorisnik)
+        {
+            return await _znackaService.GetSljedecaZnacka(idKorisnik);
+        }
     }
 }

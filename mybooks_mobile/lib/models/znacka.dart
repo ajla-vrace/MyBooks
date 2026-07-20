@@ -12,7 +12,10 @@ class Znacka {
   int prag;
   int? nivo;
   int? trenutniNapredak;
-  Znacka(this.id, this.naziv, this.opis, this.ikonica, this.tip, this.prag,this.nivo,this.trenutniNapredak);
+  int? preostalo;
+  double? procenat;
+  Znacka(this.id, this.naziv, this.opis, this.ikonica, this.tip, this.prag,this.nivo,this.trenutniNapredak,
+  this.preostalo,this.procenat);
 
   factory Znacka.fromJson(Map<String, dynamic> json) => _$ZnackaFromJson(json);
 

@@ -15,6 +15,8 @@ Znacka _$ZnackaFromJson(Map<String, dynamic> json) => Znacka(
       json['prag'] as int,
       json['nivo'] as int?,
       json['trenutniNapredak'] as int?,
+      json['preostalo'] as int?,
+      (json['procenat'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ZnackaToJson(Znacka instance) => <String, dynamic>{
@@ -26,4 +28,6 @@ Map<String, dynamic> _$ZnackaToJson(Znacka instance) => <String, dynamic>{
       'prag': instance.prag,
       'nivo': instance.nivo,
       'trenutniNapredak': instance.trenutniNapredak,
+      'preostalo': instance.preostalo,
+      'procenat': instance.procenat,
     };

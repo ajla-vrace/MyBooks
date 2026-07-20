@@ -569,7 +569,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: naslovController,
-                decoration: inputStyle("Naslov *"),
+                decoration: inputStyle("Naslov "),
                 textCapitalization: TextCapitalization.sentences,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -586,7 +586,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: autorController,
-                decoration: inputStyle("Autor *"),
+                decoration: inputStyle("Autor"),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return "Autor je obavezan.";
@@ -614,7 +614,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               ),
               const SizedBox(height: 20),
               const Text(
-                "Ocjena *",
+                "Ocjena ",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
@@ -625,7 +625,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
                 controller: recenzijaController,
                 maxLines: 3,
                 maxLength: 1000,
-                decoration: inputStyle("Recenzija *"),
+                decoration: inputStyle("Recenzija "),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return "Recenzija je obavezna.";
@@ -640,7 +640,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                "Žanrovi * (max $maxZanrova)",
+                "Žanrovi  (max $maxZanrova)",
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
@@ -649,7 +649,7 @@ class _AddKnjigaScreenState extends State<AddKnjigaScreen> {
               buildZanrovi(),
               const SizedBox(height: 25),
               const Text(
-                "Kako si se osjećala? *",
+                "Kako si se osjećala? ",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                 ),

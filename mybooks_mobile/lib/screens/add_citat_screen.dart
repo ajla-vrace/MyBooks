@@ -134,8 +134,7 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
           },
         );
 
-        var stareZnackeIds =
-            znackePrije.result.map((x) => x.znackaId).toSet();
+        var stareZnackeIds = znackePrije.result.map((x) => x.znackaId).toSet();
 
         await CitatProvider().insert({
           "idKnjiga": selectedKnjiga!.id,
@@ -776,6 +775,16 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B5E20),
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     onPressed: loading ? null : save,
                     child: loading
                         ? const CircularProgressIndicator(

@@ -16,5 +16,13 @@ namespace MyBooks.Model
         public int Prag { get; set; }
         public int? Nivo { get; set; }
         public int TrenutniNapredak { get; set; }   // novo
+
+        // NOVO
+        public int Preostalo => Math.Max(0, Prag - TrenutniNapredak);
+
+        public double Procenat =>
+            Prag == 0
+                ? 0
+                : Math.Min(1.0, (double)TrenutniNapredak / Prag);
     }
 }
