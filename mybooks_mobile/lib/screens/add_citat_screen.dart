@@ -126,7 +126,7 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
           await loadZnacke();
         }
 
-        // ====== LOGIKA ZA ZNAČKE ======
+      
 
         var znackePrije = await KorisnikZnackaProvider().get(
           filter: {
@@ -144,9 +144,7 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
           "korisnikId": Authorization.korisnik!.id,
         });
 
-        // Backend (CitatService.Insert) sinhrono await-uje
-        // ProvjeriZnacke prije vraćanja odgovora, pa dodatni
-        // delay ovdje nije potreban.
+       
         var znackePoslije = await KorisnikZnackaProvider().get(
           filter: {
             "idKorisnik": Authorization.korisnik!.id,
@@ -165,9 +163,7 @@ class _AddCitatScreenState extends State<AddCitatScreen> {
           try {
             z = sveZnacke.firstWhere((x) => x.id == id);
           } catch (_) {
-            // Značka nije pronađena u lokalno učitanoj listi
-            // (npr. lista još nije bila učitana) - preskoči je
-            // umjesto da sruši cijeli save().
+           
             z = null;
           }
 
