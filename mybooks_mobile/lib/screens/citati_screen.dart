@@ -265,9 +265,35 @@ class _CitatiScreenState extends State<CitatiScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        citat.idKnjigaNavigation?.naslov ?? "",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            citat.idKnjigaNavigation?.naslov ?? "",
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          if (citat.brojStranice != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.bookmark_border,
+                                    size: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Str. ${citat.brojStranice}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     GestureDetector(

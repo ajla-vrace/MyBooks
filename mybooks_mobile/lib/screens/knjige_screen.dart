@@ -211,16 +211,16 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                           width: 72,
                           height: 100,
                           color: const Color(0xFFEFF2EE),
-                          child: (knjiga.slika != null &&
-                                  knjiga.slika!.isNotEmpty)
-                              ? Image.memory(
-                                  base64Decode(knjiga.slika!),
-                                  fit: BoxFit.cover,
-                                )
-                              : Icon(
-                                  Icons.menu_book_rounded,
-                                  color: Colors.grey.shade400,
-                                ),
+                          child:
+                              (knjiga.slika != null && knjiga.slika!.isNotEmpty)
+                                  ? Image.memory(
+                                      base64Decode(knjiga.slika!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Icon(
+                                      Icons.menu_book_rounded,
+                                      color: Colors.grey.shade400,
+                                    ),
                         ),
                       ),
                     ),
@@ -278,7 +278,9 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                   // veći tap-target (44x44 preporuka) nego što sama ikonica izgleda
                   padding: const EdgeInsets.all(10),
                   child: Icon(
-                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     size: 18,
                     color: isFav ? Colors.red : Colors.grey.shade400,
                   ),
@@ -333,9 +335,8 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                   style: TextStyle(
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected
-                        ? const Color(0xFF6D8B74)
-                        : Colors.black87,
+                    color:
+                        isSelected ? const Color(0xFF6D8B74) : Colors.black87,
                   ),
                 ),
               ],
@@ -433,6 +434,7 @@ class _KnjigeScreenState extends State<KnjigeScreen> {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 8),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? const Color(0xFF6D8B74)

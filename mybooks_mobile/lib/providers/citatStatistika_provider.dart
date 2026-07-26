@@ -6,9 +6,9 @@ import 'package:mybooks_mobile/models/citat_statistika.dart';
 
 class CitatStatistikaProvider {
   static const String baseUrl = String.fromEnvironment("baseUrl",
-      defaultValue: "https://localhost:7208/");
+     defaultValue: "https://localhost:7208/");
  //defaultValue: "http://192.168.1.7:5208/");
- // defaultValue: "http://10.0.2.2:5208/"); //za emualtor
+//  defaultValue: "http://10.0.2.2:5208/"); //za emualtor
 
   final HttpClient client = HttpClient()
     ..badCertificateCallback = (cert, host, port) => true;

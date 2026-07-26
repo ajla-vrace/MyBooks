@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:mybooks_mobile/authorization.dart';
@@ -15,6 +17,7 @@ import 'package:mybooks_mobile/screens/add_citat_screen.dart';
 import 'package:mybooks_mobile/screens/add_knjiga_screen.dart';
 import 'package:mybooks_mobile/models/znacka.dart';
 import 'package:mybooks_mobile/providers/korisnik_znacka_provider.dart';
+import 'package:mybooks_mobile/screens/knjiga_detalji_screen.dart';
 
 // ============================================================
 // 🎨 JEDINSTVENA PALETA BOJA
@@ -108,7 +111,11 @@ class _HomeScreenState extends State<HomeScreen> {
           "NaDanasnjiDan": true,
         },
       );
-
+      print(
+          "DANASNJA KNJIGA: ${danas.result.isNotEmpty ? danas.result.first.toJson() : 'PRAZNO'}");
+      if (danas.result.isNotEmpty) {
+        print("DATUM KREIRANJA: ${danas.result.first.datumKreiranja}");
+      }
       if (!mounted) return;
 
       setState(() {
@@ -155,8 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  List<CitatPoDanu> get citatiPoDanima =>
-      citatStatistika?.citatiPoDanima ?? [];
+  List<CitatPoDanu> get citatiPoDanima => citatStatistika?.citatiPoDanima ?? [];
 
   String getMoodEmoji(String? moodText) {
     if (moodText == null) return "📖";
@@ -284,6 +290,544 @@ class _HomeScreenState extends State<HomeScreen> {
       vremenskiTekst = "Prije $godine godina";
     }
 
+    Widget bookThumb;
+    if (danasnjaKnjiga!.slika != null && danasnjaKnjiga!.slika!.isNotEmpty) {
+      try {
+        bookThumb = Image.memory(
+          base64Decode(danasnjaKnjiga!.slika!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(
+            Icons.auto_stories,
+            size: 24,
+            color: AppColors.primary,
+          ),
+        );
+      } catch (_) {
+        bookThumb = const Icon(
+          Icons.auto_stories,
+          size: 24,
+          color: AppColors.primary,
+        );
+      }
+    } else {
+      bookThumb = const Icon(
+        Icons.auto_stories,
+        size: 24,
+        color: AppColors.primary,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppColors.radiusLg),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.primaryLight],
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.06),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 15,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      "Na današnji dan",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (godine > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 12,
+                            color: Colors.white.withOpacity(0.75),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            vremenskiTekst,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.75),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: bookThumb,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            danasnjaKnjiga!.naslov ?? "",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.15,
+                            ),
+                          ),
+                          if (danasnjaKnjiga!.autor != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              danasnjaKnjiga!.autor!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.75),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                          if (ocjena > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (i) {
+                                return Icon(
+                                  i < ocjena.round()
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  size: 14,
+                                  color: const Color(0xFFFFD166),
+                                );
+                              }),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (mood != null && mood.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              getMoodEmoji(mood),
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              mood,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    if (isFav)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                          ),
+                        ),
+                        child:  Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.favorite,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              "Favorit",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Spacer(),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => KnjigaDetaljiScreen(
+                              knjiga: danasnjaKnjiga!,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Detalji",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 11,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildTodayMemoryCard2() {
+    if (danasnjaKnjiga == null) {
+      return const SizedBox();
+    }
+
+    final datum = danasnjaKnjiga!.datumKreiranja;
+    final ocjena = danasnjaKnjiga!.ocjena ?? 0;
+    final mood = danasnjaKnjiga!.mood;
+
+    int godine = 0;
+    if (datum != null) {
+      godine = DateTime.now().year - datum.year;
+    }
+
+    String vremenskiTekst;
+    if (godine == 1) {
+      vremenskiTekst = "Prije godinu dana";
+    } else if (godine > 1 && godine < 5) {
+      vremenskiTekst = "Prije $godine godine";
+    } else {
+      vremenskiTekst = "Prije $godine godina";
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppColors.radiusLg),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.primaryLight],
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.06),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 15,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      "Na današnji dan",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    if (godine > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.schedule_rounded,
+                              size: 12, color: Colors.white.withOpacity(0.75)),
+                          const SizedBox(width: 4),
+                          Text(
+                            vremenskiTekst,
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.auto_stories,
+                        size: 24,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            danasnjaKnjiga!.naslov ?? "",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.15,
+                            ),
+                          ),
+                          if (danasnjaKnjiga!.autor != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              danasnjaKnjiga!.autor!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.75),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                          if (ocjena > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (i) {
+                                return Icon(
+                                  i < ocjena.round()
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  size: 14,
+                                  color: const Color(0xFFFFD166),
+                                );
+                              }),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (mood != null && mood.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              getMoodEmoji(mood),
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              mood,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => KnjigaDetaljiScreen(
+                                knjiga: danasnjaKnjiga!,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Detalji",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.85),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 11,
+                              color: Colors.white.withOpacity(0.85),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildTodayMemoryCard1() {
+    if (danasnjaKnjiga == null) {
+      return const SizedBox();
+    }
+
+    final datum = danasnjaKnjiga!.datumKreiranja;
+    final ocjena = danasnjaKnjiga!.ocjena ?? 0;
+    final isFav = danasnjaKnjiga!.isFavorite ?? false;
+    final mood = danasnjaKnjiga!.mood;
+
+    int godine = 0;
+    if (datum != null) {
+      godine = DateTime.now().year - datum.year;
+    }
+
+    String vremenskiTekst;
+    if (godine == 1) {
+      vremenskiTekst = "Prije godinu dana";
+    } else if (godine > 1 && godine < 5) {
+      vremenskiTekst = "Prije $godine godine";
+    } else {
+      vremenskiTekst = "Prije $godine godina";
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppColors.radiusLg),
       child: Container(
@@ -324,7 +868,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child:  Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text("✨", style: TextStyle(fontSize: 11)),
@@ -928,7 +1472,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppColors.primary.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child:  Row(
+              child: Row(
                 children: [
                   Icon(Icons.celebration, color: AppColors.primary),
                   SizedBox(width: 8),
@@ -1243,8 +1787,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: buildInfoCard(
                           "Ocjena",
-                          (statistika?.prosjecnaOcjena ?? 0)
-                              .toStringAsFixed(1),
+                          (statistika?.prosjecnaOcjena ?? 0).toStringAsFixed(1),
                           Icons.star,
                         ),
                       ),

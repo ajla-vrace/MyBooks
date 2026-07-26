@@ -24,6 +24,7 @@ namespace MyBooks.Model
         public byte[]? Slika { get; set; }
         public bool IsFavorite { get; set; } = false;
         public string? Mood { get; set; }
+        public DateTime? DatumKreiranja { get; set; }
         public List<Zanr> Zanrovi { get; set; } = new List<Zanr>();
       //  public List<Citat> Citati { get; set; } = new List<Citat>();
         // public List<Zanr> KnjigaZanrs { get; set; } = new List<Zanr>();
