@@ -8,7 +8,7 @@ The application is currently under active development.
 
 * Personal book library with detailed book information
 * Favorite books and quotes
-* Quote management
+* Quote collection and management
 * Daily quote challenge and quote streaks
 * Personal book wishlist
 * Random book suggestions
@@ -22,6 +22,8 @@ The application is currently under active development.
   * Books added by month
   * Emotional reading journey based on selected moods
 * Achievement and badge system with progress tracking
+* Interactive constellation visualization of reading progress
+* Personalized onboarding tutorial for new users
 * “On This Day” feature for revisiting books and reading activity from previous years
 
 ## 🛠️ Technologies
