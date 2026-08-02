@@ -20,7 +20,7 @@ The application is currently under active development.
   * Top genres
   * Reading activity heatmap
   * Books added by month
-  * Emotional reading journey based on selected moods
+  * Mood-based reading insights
 * Achievement and badge system with progress tracking
 * Interactive constellation visualization of reading progress
 * Personalized onboarding tutorial for new users
