@@ -244,10 +244,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     try {
       var provider = KnjigaProvider();
 
-     /* await provider.update(knjiga.id!, {
+      /* await provider.update(knjiga.id!, {
         "isFavorite": false,
       });*/
-        await provider.update(knjiga.id!, {
+      await provider.update(knjiga.id!, {
         "naslov": knjiga.naslov,
         "autor": knjiga.autor,
         "opis": knjiga.opis,
@@ -351,8 +351,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return buildStatCard(
-     title: "Tvoj emocionalni trag",
-     emoji: "🎭",
+      title: "Tvoj emocionalni trag",
+      emoji: "🎭",
       child: MoodRingChart(
         moods: statistika!.moodStatistika!,
       ),
@@ -1076,7 +1076,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  Widget buildZnackeByNivo() {
+/*  Widget buildZnackeByNivo() {
     if (sveZnacke.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16),
@@ -1134,8 +1134,83 @@ class _ProfileScreenState extends State<ProfileScreen>
               Wrap(
                 spacing: 18,
                 runSpacing: 20,
+               // alignment: WrapAlignment.center,
                 children:
                     grupa.map((znacka) => buildZnackaBadge(znacka)).toList(),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }*/
+
+  Widget buildZnackeByNivo() {
+    if (sveZnacke.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          "Nema dostupnih znački 🏅",
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    final Map<int, List<Znacka>> byNivo = {};
+    for (final z in sveZnacke) {
+      final n = z.nivo ?? 0;
+      byNivo.putIfAbsent(n, () => []).add(z);
+    }
+
+    final nivoi = byNivo.keys.toList()..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: nivoi.map((nivo) {
+        final grupa = byNivo[nivo]!;
+        final boja = colorForNivo(nivo == 0 ? null : nivo);
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: boja,
+                      boxShadow: [
+                        BoxShadow(color: boja.withOpacity(0.6), blurRadius: 5),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    nivoLabel(nivo == 0 ? null : nivo),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 20,
+                crossAxisSpacing: 8,
+                childAspectRatio: 0.68,
+                children: grupa
+                    .map((znacka) => Center(child: buildZnackaBadge(znacka)))
+                    .toList(),
               ),
               const SizedBox(height: 4),
             ],
