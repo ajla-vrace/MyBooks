@@ -36,8 +36,6 @@ The application is currently under active development.
 
 Screenshots will be added soon.
 
-## 🚧 Project Status
 
-MyBooks is currently under active development, with new features and improvements being added continuously.
 
 
